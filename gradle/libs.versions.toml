@@ -2,9 +2,10 @@
 agp = "9.2.1"
 kotlin = "2.4.10"
 ksp = "2.3.11"
-composeBom = "2026.08.00"
-coreKtx = "1.19.0"
-activityCompose = "1.13.0"
+# این سه نسخه روی Android API 36 ساخته شده‌اند؛ نسل بعدی آن‌ها compileSdk 37 می‌خواهد.
+composeBom = "2025.12.00"
+coreKtx = "1.17.0"
+activityCompose = "1.12.2"
 lifecycle = "2.10.0"
 navigation = "2.9.6"
 room = "2.8.4"
