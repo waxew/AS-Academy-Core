@@ -19,6 +19,18 @@ interface ProgressDao {
 }
 
 @Dao
+interface LearningCompletionDao {
+    @Query("SELECT * FROM learning_completion")
+    fun observeAll(): Flow<List<LearningCompletionEntity>>
+
+    @Query("SELECT * FROM learning_completion WHERE targetType = :targetType AND targetId = :targetId LIMIT 1")
+    fun observe(targetType: String, targetId: String): Flow<LearningCompletionEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: LearningCompletionEntity)
+}
+
+@Dao
 interface BookmarkDao {
     @Query("SELECT * FROM bookmarks ORDER BY createdAt DESC")
     fun observeAll(): Flow<List<BookmarkEntity>>
@@ -34,6 +46,9 @@ interface BookmarkDao {
 interface QuizResultDao {
     @Query("SELECT * FROM quiz_results WHERE quizId = :quizId ORDER BY completedAt DESC")
     fun observeForQuiz(quizId: String): Flow<List<QuizResultEntity>>
+
+    @Query("SELECT * FROM quiz_results")
+    fun observeAll(): Flow<List<QuizResultEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: QuizResultEntity)
