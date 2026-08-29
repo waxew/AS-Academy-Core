@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.asdevelopers.academy.core"
-    compileSdk = 37
+    // API 36 آخرین Platform پایدار قابل دریافت از کانال پیش‌فرض sdkmanager در CI است.
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 23

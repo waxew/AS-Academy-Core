@@ -36,7 +36,7 @@ course <- engine <- core <- course application
 
 ## شروع سریع
 
-نیازمندی‌ها: JDK 17، Android SDK 37 و Gradle Wrapper موجود در Repository.
+نیازمندی‌ها: JDK 17، Android SDK 36 و Gradle Wrapper موجود در Repository.
 
 ```bash
 # تست موتورهای مستقل از Android

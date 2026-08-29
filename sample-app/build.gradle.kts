@@ -5,12 +5,13 @@ plugins {
 
 android {
     namespace = "com.asdevelopers.academy.sample"
-    compileSdk = 37
+    // Sample روی همان SDK پایدار Runtime مشترک ساخته می‌شود تا CI و Courseها یک مبنا داشته باشند.
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.asdevelopers.academy.sample"
         minSdk = 23
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
     }

@@ -18,3 +18,8 @@ application {
     // نام کامل کلاس Main برای اجرای قابل پیش‌بینی از Gradle ثبت می‌شود.
     mainClass.set("com.asdevelopers.academy.tools.CourseCompilerCliKt")
 }
+
+tasks.named<JavaExec>("run") {
+    // تمام مسیرهای CLI طبق README و CI نسبت به Root Repository تفسیر می‌شوند، نه پوشه ماژول tools.
+    workingDir(rootProject.projectDir)
+}
