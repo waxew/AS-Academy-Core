@@ -38,7 +38,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.room.runtime)
+    // AcademyDatabase یک API عمومی Core و زیرکلاس RoomDatabase است؛ بنابراین مصرف‌کننده باید
+    // RoomDatabase را روی compile classpath ببیند. runtime عمداً api است، نه implementation.
+    api(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore)
