@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -80,8 +81,8 @@ private fun AcademyShell(course: CoursePackage, extras: LearningExtras, db: Acad
     } } }) {
         Scaffold(topBar = { TopAppBar(title = { Text(course.manifest.titleEn) }, navigationIcon = { Button(onClick = { scope.launch { drawer.open() } }) { Text("☰") } }) }) { padding ->
             NavHost(nav, AcademyRoutes.HOME, Modifier.padding(padding)) {
-                composable(AcademyRoutes.HOME) { HomeScreen(course, extras, nav) }; composable(AcademyRoutes.CHAPTERS) { ChapterScreen(course, it.arguments?.getString("levelId").orEmpty(), nav) }; composable(AcademyRoutes.LESSONS) { LessonListScreen(course, it.arguments?.getString("chapterId").orEmpty(), nav) }; composable(AcademyRoutes.LESSON) { LessonScreen(course, extras, it.arguments?.getString("lessonId").orEmpty(), db, codeRunner, nav) }
-                composable(AcademyRoutes.EXERCISES) { ExerciseListScreen(extras, nav) }; composable(AcademyRoutes.EXERCISE) { ExerciseDetailScreen(extras, it.arguments?.getString("exerciseId").orEmpty()) }; composable(AcademyRoutes.QUIZZES) { QuizListScreen(extras, nav) }; composable(AcademyRoutes.QUIZ) { QuizDetailScreen(extras, it.arguments?.getString("quizId").orEmpty(), db) }; composable(AcademyRoutes.PROJECTS) { ProjectListScreen(extras, nav) }; composable(AcademyRoutes.PROJECT) { ProjectDetailScreen(extras, it.arguments?.getString("projectId").orEmpty()) }; composable(AcademyRoutes.GLOSSARY) { GlossaryScreen(extras) }; composable(AcademyRoutes.SEARCH) { SearchScreen(db, nav) }; composable(AcademyRoutes.BOOKMARKS) { BookmarkScreen(course, db, nav) }; composable(AcademyRoutes.PROGRESS) { ProgressScreen(course, db) }; composable(AcademyRoutes.SETTINGS) { SettingsScreen(settings) }; composable(AcademyRoutes.ABOUT) { AboutScreen(course) }
+                composable(AcademyRoutes.HOME) { HomeScreen(course, extras, db, nav) }; composable(AcademyRoutes.CHAPTERS) { ChapterScreen(course, it.arguments?.getString("levelId").orEmpty(), nav) }; composable(AcademyRoutes.LESSONS) { LessonListScreen(course, it.arguments?.getString("chapterId").orEmpty(), nav) }; composable(AcademyRoutes.LESSON) { LessonScreen(course, extras, it.arguments?.getString("lessonId").orEmpty(), db, codeRunner, nav) }
+                composable(AcademyRoutes.EXERCISES) { ExerciseListScreen(extras, nav, db) }; composable(AcademyRoutes.EXERCISE) { ExerciseDetailScreen(extras, it.arguments?.getString("exerciseId").orEmpty(), db) }; composable(AcademyRoutes.QUIZZES) { QuizListScreen(extras, nav, db) }; composable(AcademyRoutes.QUIZ) { QuizDetailScreen(extras, it.arguments?.getString("quizId").orEmpty(), db) }; composable(AcademyRoutes.PROJECTS) { ProjectListScreen(extras, nav, db) }; composable(AcademyRoutes.PROJECT) { ProjectDetailScreen(extras, it.arguments?.getString("projectId").orEmpty(), db) }; composable(AcademyRoutes.GLOSSARY) { GlossaryScreen(extras) }; composable(AcademyRoutes.SEARCH) { SearchScreen(db, nav) }; composable(AcademyRoutes.BOOKMARKS) { BookmarkScreen(course, db, nav) }; composable(AcademyRoutes.PROGRESS) { ProgressScreen(course, extras, db) }; composable(AcademyRoutes.SETTINGS) { SettingsScreen(settings) }; composable(AcademyRoutes.ABOUT) { AboutScreen(course) }
             }
         }
     }
@@ -89,11 +90,17 @@ private fun AcademyShell(course: CoursePackage, extras: LearningExtras, db: Acad
 
 @Composable private fun DrawerItem(label: String, route: String, nav: NavHostController, close: () -> Unit) { NavigationDrawerItem(label = { Text(label) }, selected = false, onClick = { nav.navigate(route); close() }) }
 
-@Composable private fun HomeScreen(course: CoursePackage, extras: LearningExtras, nav: NavHostController) { LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-    item { Text(course.manifest.titleFa, style = MaterialTheme.typography.headlineMedium); Text("از مبانی تا پروژه‌های واقعی", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-    item { AcademyCard("تمرین‌ها", "${extras.exercises.size} تمرین عملی", onClick = { nav.navigate(AcademyRoutes.EXERCISES) }) }; item { AcademyCard("آزمون‌ها", "${extras.quizzes.sumOf { it.questions.size }} سؤال", onClick = { nav.navigate(AcademyRoutes.QUIZZES) }) }; item { AcademyCard("پروژه‌های عملی", "${extras.projects.size} پروژه", onClick = { nav.navigate(AcademyRoutes.PROJECTS) }) }; item { AcademyCard("واژه‌نامه", "${extras.glossary.size} اصطلاح", onClick = { nav.navigate(AcademyRoutes.GLOSSARY) }) }
-    items(course.levels.sortedBy { it.order }, key = { it.id }) { level -> val chapters = course.chaptersFor(level.id); AcademyCard(level.title, "${chapters.sumOf { course.lessonsFor(it.id).size }} درس", onClick = { nav.navigate(AcademyRoutes.chapters(level.id)) }) }
-} }
+@Composable private fun HomeScreen(course: CoursePackage, extras: LearningExtras, db: AcademyDatabase, nav: NavHostController) {
+    val progress by db.progressDao().observeAll().collectAsState(initial = emptyList())
+    val completed = progress.count { it.completed }
+    val percent = if (course.lessons.isEmpty()) 0 else completed * 100 / course.lessons.size
+    LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text(course.manifest.titleFa, style = MaterialTheme.typography.headlineMedium); Text("از مبانی تا پروژه‌های واقعی", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Text("پیشرفت کل دوره: $percent%", style = MaterialTheme.typography.titleMedium); LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth()) }
+        item { AcademyCard("تمرین‌ها", "${extras.exercises.size} تمرین عملی", onClick = { nav.navigate(AcademyRoutes.EXERCISES) }) }; item { AcademyCard("آزمون‌ها", "${extras.quizzes.sumOf { it.questions.size }} سؤال", onClick = { nav.navigate(AcademyRoutes.QUIZZES) }) }; item { AcademyCard("پروژه‌های عملی", "${extras.projects.size} پروژه", onClick = { nav.navigate(AcademyRoutes.PROJECTS) }) }; item { AcademyCard("واژه‌نامه", "${extras.glossary.size} اصطلاح", onClick = { nav.navigate(AcademyRoutes.GLOSSARY) }) }
+        items(course.levels.sortedBy { it.order }, key = { it.id }) { level -> val chapters = course.chaptersFor(level.id); val lessons = chapters.flatMap { course.lessonsFor(it.id) }; val done = lessons.count { lesson -> progress.any { it.lessonId == lesson.id && it.completed } }; val levelPercent = if (lessons.isEmpty()) 0 else done * 100 / lessons.size; AcademyCard(level.title, "${lessons.size} درس • $levelPercent% تکمیل", onClick = { nav.navigate(AcademyRoutes.chapters(level.id)) }) }
+    }
+}
 @Composable private fun ChapterScreen(course: CoursePackage, levelId: String, nav: NavHostController) { LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { items(course.chaptersFor(levelId), key = { it.id }) { AcademyCard(it.title, it.description, onClick = { nav.navigate(AcademyRoutes.lessons(it.id)) }) } } }
 @Composable private fun LessonListScreen(course: CoursePackage, chapterId: String, nav: NavHostController) { LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { items(course.lessonsFor(chapterId), key = { it.id }) { AcademyCard(it.title, "${it.estimatedMinutes} دقیقه", onClick = { nav.navigate(AcademyRoutes.lesson(it.id)) }) } } }
 
@@ -107,7 +114,30 @@ private fun AcademyShell(course: CoursePackage, extras: LearningExtras, db: Acad
         item { Button(onClick = { scope.launch { db.bookmarkDao().upsert(BookmarkEntity("lesson:$lessonId", "LESSON", lessonId, lessonId, System.currentTimeMillis())) } }, modifier = Modifier.fillMaxWidth()) { Text("افزودن به علاقه‌مندی‌ها") } }
     }
 }
-@Composable private fun ProgressScreen(course: CoursePackage, db: AcademyDatabase) { val progress by db.progressDao().observeAll().collectAsState(initial = emptyList()); val completed = progress.count { it.completed }; Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("پیشرفت", style = MaterialTheme.typography.headlineMedium); Text("$completed از ${course.lessons.size} درس تکمیل شده است") } }
+
+@Composable private fun ProgressScreen(course: CoursePackage, extras: LearningExtras, db: AcademyDatabase) {
+    val progress by db.progressDao().observeAll().collectAsState(initial = emptyList())
+    val completions by db.learningCompletionDao().observeAll().collectAsState(initial = emptyList())
+    val attempts by db.quizResultDao().observeAll().collectAsState(initial = emptyList())
+    val completedLessons = progress.count { it.completed }
+    val lessonPercent = if (course.lessons.isEmpty()) 0 else completedLessons * 100 / course.lessons.size
+    val completedExercises = extras.exercises.count { exercise -> completions.any { it.targetType == "EXERCISE" && it.targetId == exercise.id && it.completed } }
+    val completedProjects = extras.projects.count { project -> completions.any { it.targetType == "PROJECT" && it.targetId == project.id && it.completed } }
+    val passedQuizzes = extras.quizzes.count { quiz -> attempts.any { it.quizId == quiz.id && it.scorePercent >= quiz.passingScorePercent } }
+    LazyColumn(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { Text("پیشرفت یادگیری", style = MaterialTheme.typography.headlineMedium) }
+        item { Text("کل درس‌ها: $completedLessons از ${course.lessons.size} — $lessonPercent%"); LinearProgressIndicator(progress = { lessonPercent / 100f }, modifier = Modifier.fillMaxWidth()) }
+        item { Text("تمرین‌ها: $completedExercises از ${extras.exercises.size}") }
+        item { Text("آزمون‌های قبول‌شده: $passedQuizzes از ${extras.quizzes.size}") }
+        item { Text("پروژه‌ها: $completedProjects از ${extras.projects.size}") }
+        items(course.levels.sortedBy { it.order }, key = { it.id }) { level ->
+            val lessons = course.chaptersFor(level.id).flatMap { course.lessonsFor(it.id) }
+            val done = lessons.count { lesson -> progress.any { it.lessonId == lesson.id && it.completed } }
+            val percent = if (lessons.isEmpty()) 0 else done * 100 / lessons.size
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { Text("${level.title}: $done/${lessons.size} — $percent%", style = MaterialTheme.typography.titleMedium); LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth()) }
+        }
+    }
+}
 @Composable private fun BookmarkScreen(course: CoursePackage, db: AcademyDatabase, nav: NavHostController) { val bookmarks by db.bookmarkDao().observeAll().collectAsState(initial = emptyList()); LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { items(bookmarks, key = { it.id }) { bookmark -> AcademyCard(course.lesson(bookmark.targetId)?.title ?: bookmark.targetId, bookmark.targetType, onClick = { if (bookmark.targetType == "LESSON") nav.navigate(AcademyRoutes.lesson(bookmark.targetId)) }) } } }
 @Composable private fun SearchScreen(db: AcademyDatabase, nav: NavHostController) { val scope = rememberCoroutineScope(); var query by remember { mutableStateOf("") }; var results by remember { mutableStateOf(emptyList<com.asdevelopers.academy.core.database.SearchIndexEntity>()) }; Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { androidx.compose.material3.OutlinedTextField(query, { query = it }, label = { Text("جستجو") }, modifier = Modifier.fillMaxWidth()); Button(onClick = { scope.launch { results = if (query.isBlank()) emptyList() else db.searchDao().search("${query.trim()}*") } }) { Text("جستجو") }; results.forEach { result -> AcademyCard(result.title, result.refType, onClick = { if (result.refType == "LESSON") nav.navigate(AcademyRoutes.lesson(result.refId)) }) } } }
 @Composable private fun SettingsScreen(settings: AcademySettingsRepository) { val dark by settings.darkMode.collectAsState(initial = false); val scope = rememberCoroutineScope(); Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Text("تنظیمات", style = MaterialTheme.typography.headlineMedium); Button(onClick = { scope.launch { settings.setDarkMode(!dark) } }) { Text(if (dark) "حالت روشن" else "حالت تاریک") } } }
