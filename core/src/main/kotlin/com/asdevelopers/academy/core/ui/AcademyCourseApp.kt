@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -94,11 +95,31 @@ private fun AcademyShell(course: CoursePackage, extras: LearningExtras, db: Acad
     val progress by db.progressDao().observeAll().collectAsState(initial = emptyList())
     val completed = progress.count { it.completed }
     val percent = if (course.lessons.isEmpty()) 0 else completed * 100 / course.lessons.size
+    val orderedLevels = course.levels.sortedBy { it.order }
+    val orderedLessons = orderedLevels.flatMap { level -> course.chaptersFor(level.id).sortedBy { it.order }.flatMap { chapter -> course.lessonsFor(chapter.id).sortedBy { it.order } } }
+    val nextLesson = orderedLessons.firstOrNull { lesson -> progress.none { it.lessonId == lesson.id && it.completed } }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text(course.manifest.titleFa, style = MaterialTheme.typography.headlineMedium); Text("از مبانی تا پروژه‌های واقعی", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { Text("پیشرفت کل دوره: $percent%", style = MaterialTheme.typography.titleMedium); LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth()) }
+        nextLesson?.let { lesson -> item { AcademyCard("ادامه یادگیری", lesson.title, onClick = { nav.navigate(AcademyRoutes.lesson(lesson.id)) }) } }
         item { AcademyCard("تمرین‌ها", "${extras.exercises.size} تمرین عملی", onClick = { nav.navigate(AcademyRoutes.EXERCISES) }) }; item { AcademyCard("آزمون‌ها", "${extras.quizzes.sumOf { it.questions.size }} سؤال", onClick = { nav.navigate(AcademyRoutes.QUIZZES) }) }; item { AcademyCard("پروژه‌های عملی", "${extras.projects.size} پروژه", onClick = { nav.navigate(AcademyRoutes.PROJECTS) }) }; item { AcademyCard("واژه‌نامه", "${extras.glossary.size} اصطلاح", onClick = { nav.navigate(AcademyRoutes.GLOSSARY) }) }
-        items(course.levels.sortedBy { it.order }, key = { it.id }) { level -> val chapters = course.chaptersFor(level.id); val lessons = chapters.flatMap { course.lessonsFor(it.id) }; val done = lessons.count { lesson -> progress.any { it.lessonId == lesson.id && it.completed } }; val levelPercent = if (lessons.isEmpty()) 0 else done * 100 / lessons.size; AcademyCard(level.title, "${lessons.size} درس • $levelPercent% تکمیل", onClick = { nav.navigate(AcademyRoutes.chapters(level.id)) }) }
+        itemsIndexed(orderedLevels, key = { _, level -> level.id }) { index, level ->
+            val chapters = course.chaptersFor(level.id)
+            val lessons = chapters.flatMap { course.lessonsFor(it.id) }
+            val done = lessons.count { lesson -> progress.any { it.lessonId == lesson.id && it.completed } }
+            val levelPercent = if (lessons.isEmpty()) 0 else done * 100 / lessons.size
+            val unlocked = if (index == 0) true else {
+                val previous = orderedLevels[index - 1]
+                val previousLessons = course.chaptersFor(previous.id).flatMap { course.lessonsFor(it.id) }
+                val previousDone = previousLessons.count { lesson -> progress.any { it.lessonId == lesson.id && it.completed } }
+                previousLessons.isEmpty() || previousDone * 100 / previousLessons.size >= 80
+            }
+            AcademyCard(
+                level.title,
+                if (unlocked) "${lessons.size} درس • $levelPercent% تکمیل" else "قفل است • برای باز شدن، سطح قبل را حداقل 80% تکمیل کنید",
+                onClick = { if (unlocked) nav.navigate(AcademyRoutes.chapters(level.id)) }
+            )
+        }
     }
 }
 @Composable private fun ChapterScreen(course: CoursePackage, levelId: String, nav: NavHostController) { LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { items(course.chaptersFor(levelId), key = { it.id }) { AcademyCard(it.title, it.description, onClick = { nav.navigate(AcademyRoutes.lessons(it.id)) }) } } }
