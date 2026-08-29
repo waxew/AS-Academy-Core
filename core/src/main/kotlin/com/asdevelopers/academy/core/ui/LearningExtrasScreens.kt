@@ -33,7 +33,7 @@ internal fun ExerciseListScreen(extras: LearningExtras, nav: NavHostController) 
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("تمرین‌ها", style = MaterialTheme.typography.headlineMedium) }
         items(extras.exercises, key = { it.id }) { exercise ->
-            AcademyCard(exercise.title, exercise.difficulty.name) { nav.navigate(AcademyRoutes.exercise(exercise.id)) }
+            AcademyCard(exercise.title, exercise.difficulty.name, onClick = { nav.navigate(AcademyRoutes.exercise(exercise.id)) })
         }
     }
 }
@@ -43,20 +43,13 @@ internal fun ExerciseDetailScreen(extras: LearningExtras, exerciseId: String) {
     val exercise = extras.exercises.firstOrNull { it.id == exerciseId } ?: return
     var showHint by remember(exerciseId) { mutableIntStateOf(0) }
     var showSolution by remember(exerciseId) { mutableStateOf(false) }
-
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text(exercise.title, style = MaterialTheme.typography.headlineMedium) }
         item { Text("سطح: ${exercise.difficulty.name}") }
         item { Text(exercise.description) }
-        exercise.starterCode?.let { code ->
-            item { Text(code, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyLarge) }
-        }
-        if (showHint > 0) {
-            items(exercise.hints.take(showHint)) { hint -> Text("راهنما: $hint") }
-        }
-        if (exercise.hints.isNotEmpty() && showHint < exercise.hints.size) {
-            item { Button(onClick = { showHint++ }, modifier = Modifier.fillMaxWidth()) { Text("نمایش راهنمای بعدی") } }
-        }
+        exercise.starterCode?.let { code -> item { Text(code, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyLarge) } }
+        if (showHint > 0) items(exercise.hints.take(showHint)) { hint -> Text("راهنما: $hint") }
+        if (exercise.hints.isNotEmpty() && showHint < exercise.hints.size) item { Button(onClick = { showHint++ }, modifier = Modifier.fillMaxWidth()) { Text("نمایش راهنمای بعدی") } }
         item { Button(onClick = { showSolution = !showSolution }, modifier = Modifier.fillMaxWidth()) { Text(if (showSolution) "پنهان کردن پاسخ" else "نمایش پاسخ") } }
         if (showSolution) {
             exercise.solution?.let { solution -> item { Text(solution, fontFamily = FontFamily.Monospace) } }
@@ -71,9 +64,7 @@ internal fun QuizListScreen(extras: LearningExtras, nav: NavHostController) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("آزمون‌ها", style = MaterialTheme.typography.headlineMedium) }
         items(extras.quizzes, key = { it.id }) { quiz ->
-            AcademyCard(quiz.title, "${quiz.questions.size} سؤال • حدنصاب ${quiz.passingScorePercent}%") {
-                nav.navigate(AcademyRoutes.quiz(quiz.id))
-            }
+            AcademyCard(quiz.title, "${quiz.questions.size} سؤال • حدنصاب ${quiz.passingScorePercent}%", onClick = { nav.navigate(AcademyRoutes.quiz(quiz.id)) })
         }
     }
 }
@@ -88,7 +79,6 @@ internal fun QuizDetailScreen(extras: LearningExtras, quizId: String, db: Academ
     var finished by remember(quizId) { mutableStateOf(false) }
     var feedback by remember(quizId, index) { mutableStateOf<String?>(null) }
     val question = quiz.questions.getOrNull(index)
-
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(quiz.title, style = MaterialTheme.typography.headlineMedium)
         if (finished) {
@@ -98,50 +88,23 @@ internal fun QuizDetailScreen(extras: LearningExtras, quizId: String, db: Academ
         } else if (question != null) {
             Text("سؤال ${index + 1} از ${quiz.questions.size}")
             Text(question.question, style = MaterialTheme.typography.titleLarge)
-            question.answers.forEach { answer ->
-                Button(
-                    onClick = { if (feedback == null) selectedId = answer.id },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (selectedId == answer.id) "✓ ${answer.text}" else answer.text) }
-            }
-            Button(
-                enabled = selectedId != null && feedback == null,
-                onClick = {
-                    val selected = question.answers.firstOrNull { it.id == selectedId }
-                    val correct = selected?.isCorrect == true
-                    if (correct) correctCount++
-                    feedback = if (correct) "پاسخ صحیح است. ${question.explanation}" else "پاسخ نادرست است. ${question.explanation}"
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("بررسی پاسخ") }
+            question.answers.forEach { answer -> Button(onClick = { if (feedback == null) selectedId = answer.id }, modifier = Modifier.fillMaxWidth()) { Text(if (selectedId == answer.id) "✓ ${answer.text}" else answer.text) } }
+            Button(enabled = selectedId != null && feedback == null, onClick = {
+                val selected = question.answers.firstOrNull { it.id == selectedId }
+                val correct = selected?.isCorrect == true
+                if (correct) correctCount++
+                feedback = if (correct) "پاسخ صحیح است. ${question.explanation}" else "پاسخ نادرست است. ${question.explanation}"
+            }, modifier = Modifier.fillMaxWidth()) { Text("بررسی پاسخ") }
             feedback?.let { text ->
                 Text(text)
-                Button(
-                    onClick = {
-                        val last = index == quiz.questions.lastIndex
-                        if (last) {
-                            finished = true
-                            val percent = if (quiz.questions.isEmpty()) 0 else (correctCount * 100) / quiz.questions.size
-                            scope.launch {
-                                db.quizResultDao().insert(
-                                    QuizResultEntity(
-                                        attemptId = "$quizId:${System.currentTimeMillis()}",
-                                        quizId = quizId,
-                                        scorePercent = percent,
-                                        correctCount = correctCount,
-                                        wrongCount = quiz.questions.size - correctCount,
-                                        completedAt = System.currentTimeMillis()
-                                    )
-                                )
-                            }
-                        } else {
-                            index++
-                            selectedId = null
-                            feedback = null
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (index == quiz.questions.lastIndex) "نمایش نتیجه" else "سؤال بعد") }
+                Button(onClick = {
+                    val last = index == quiz.questions.lastIndex
+                    if (last) {
+                        finished = true
+                        val percent = if (quiz.questions.isEmpty()) 0 else (correctCount * 100) / quiz.questions.size
+                        scope.launch { db.quizResultDao().insert(QuizResultEntity("$quizId:${System.currentTimeMillis()}", quizId, percent, correctCount, quiz.questions.size - correctCount, System.currentTimeMillis())) }
+                    } else { index++; selectedId = null; feedback = null }
+                }, modifier = Modifier.fillMaxWidth()) { Text(if (index == quiz.questions.lastIndex) "نمایش نتیجه" else "سؤال بعد") }
             }
         }
     }
@@ -151,11 +114,7 @@ internal fun QuizDetailScreen(extras: LearningExtras, quizId: String, db: Academ
 internal fun ProjectListScreen(extras: LearningExtras, nav: NavHostController) {
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("پروژه‌های عملی", style = MaterialTheme.typography.headlineMedium) }
-        items(extras.projects, key = { it.id }) { project ->
-            AcademyCard(project.title, "${project.difficulty} • ${project.steps.size} مرحله") {
-                nav.navigate(AcademyRoutes.project(project.id))
-            }
-        }
+        items(extras.projects, key = { it.id }) { project -> AcademyCard(project.title, "${project.difficulty} • ${project.steps.size} مرحله", onClick = { nav.navigate(AcademyRoutes.project(project.id)) }) }
     }
 }
 
@@ -163,10 +122,7 @@ internal fun ProjectListScreen(extras: LearningExtras, nav: NavHostController) {
 internal fun ProjectDetailScreen(extras: LearningExtras, projectId: String) {
     val project = extras.projects.firstOrNull { it.id == projectId } ?: return
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text(project.title, style = MaterialTheme.typography.headlineMedium) }
-        item { Text(project.summary) }
-        item { Text("سطح: ${project.difficulty}") }
-        item { Text("مراحل پروژه", style = MaterialTheme.typography.titleLarge) }
+        item { Text(project.title, style = MaterialTheme.typography.headlineMedium) }; item { Text(project.summary) }; item { Text("سطح: ${project.difficulty}") }; item { Text("مراحل پروژه", style = MaterialTheme.typography.titleLarge) }
         items(project.steps.mapIndexed { i, step -> "${i + 1}. $step" }) { step -> Text(step) }
     }
 }
@@ -174,23 +130,10 @@ internal fun ProjectDetailScreen(extras: LearningExtras, projectId: String) {
 @Composable
 internal fun GlossaryScreen(extras: LearningExtras) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query, extras.glossary) {
-        extras.glossary.filter { entry ->
-            query.isBlank() || entry.term.contains(query, true) || entry.translation.contains(query, true) || entry.definition.contains(query, true)
-        }
-    }
+    val filtered = remember(query, extras.glossary) { extras.glossary.filter { query.isBlank() || it.term.contains(query, true) || it.translation.contains(query, true) || it.definition.contains(query, true) } }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("واژه‌نامه", style = MaterialTheme.typography.headlineMedium)
         OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("جستجوی اصطلاح") }, modifier = Modifier.fillMaxWidth())
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filtered, key = { it.id }) { entry ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(entry.term, style = MaterialTheme.typography.titleMedium)
-                    if (entry.translation.isNotBlank()) Text(entry.translation)
-                    Text(entry.definition, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (entry.related.isNotEmpty()) Text("مرتبط: ${entry.related.joinToString("، ")}", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) { items(filtered, key = { it.id }) { entry -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { Text(entry.term, style = MaterialTheme.typography.titleMedium); if (entry.translation.isNotBlank()) Text(entry.translation); Text(entry.definition, color = MaterialTheme.colorScheme.onSurfaceVariant); if (entry.related.isNotEmpty()) Text("مرتبط: ${entry.related.joinToString("، ")}", style = MaterialTheme.typography.bodySmall) } } }
     }
 }
