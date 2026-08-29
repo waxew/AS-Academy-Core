@@ -1,6 +1,14 @@
-// فایل Build سطح ریشه AS Academy Core.
-// نسخه دقیق پلاگین‌های Android/Kotlin در مرحله اتصال Build نهایی تثبیت می‌شود؛
-// ماژول‌ها از این ریشه یک قرارداد Build واحد خواهند داشت تا اصول همه اپ‌ها یکسان بماند.
+// Build مرکزی AS Academy Core.
+// AGP 9 از Kotlin داخلی استفاده می‌کند؛ نسخه KGP جدیدتر برای Compose Compiler و ابزارهای Kotlin تثبیت می‌شود.
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.10")
+    }
+}
+
 plugins {
-    // عمداً در ریشه پلاگین اجرایی اعمال نمی‌شود.
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.compose.compiler) apply false
 }
