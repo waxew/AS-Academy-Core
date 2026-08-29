@@ -17,7 +17,7 @@ import org.json.JSONObject
 
 /**
  * Loader محتوای تکمیلی آموزشی هر Course.
- * تمرین، آزمون، پروژه و واژه‌نامه در Course repo قرار دارند ولی Parser فقط در Core نگهداری می‌شود.
+ * Course می‌تواند هر فایل را به صورت یک Object یا آرایه‌ای از Objectها نگهداری کند.
  */
 data class LearningExtras(
     val exercises: List<Exercise> = emptyList(),
@@ -33,22 +33,31 @@ class LearningExtrasLoader(private val assets: AssetManager) {
             exercises = loadJsonObjects("$root/exercises").map(::parseExercise),
             quizzes = loadJsonObjects("$root/quizzes").map(::parseQuiz),
             projects = loadJsonObjects("$root/projects").map(::parseProject),
-            glossary = loadGlossary("$root/glossary")
+            glossary = loadJsonObjects("$root/glossary").map(::parseGlossary)
         )
     }
 
+    /**
+     * هر فایل JSON می‌تواند یک Object مستقل یا یک Array از Objectها باشد.
+     * این انعطاف اجازه می‌دهد Courseهای کوچک یک فایل تجمیعی و Courseهای بزرگ فایل‌های جدا داشته باشند.
+     */
     private fun loadJsonObjects(path: String): List<JSONObject> =
-        assets.list(path).orEmpty().filter { it.endsWith(".json") }.sorted().mapNotNull { file ->
-            runCatching { JSONObject(readText("$path/$file")) }.getOrNull()
-        }
-
-    private fun loadGlossary(path: String): List<GlossaryEntry> =
-        assets.list(path).orEmpty().filter { it.endsWith(".json") }.sorted().flatMap { file ->
-            runCatching {
-                val array = JSONArray(readText("$path/$file"))
-                (0 until array.length()).map { parseGlossary(array.getJSONObject(it)) }
-            }.getOrDefault(emptyList())
-        }
+        assets.list(path).orEmpty()
+            .filter { it.endsWith(".json") }
+            .sorted()
+            .flatMap { file ->
+                runCatching {
+                    val text = readText("$path/$file").trim()
+                    when {
+                        text.startsWith("[") -> {
+                            val array = JSONArray(text)
+                            (0 until array.length()).map { array.getJSONObject(it) }
+                        }
+                        text.startsWith("{") -> listOf(JSONObject(text))
+                        else -> emptyList()
+                    }
+                }.getOrDefault(emptyList())
+            }
 
     private fun readText(path: String): String = assets.open(path).bufferedReader().use { it.readText() }
 
@@ -56,18 +65,18 @@ class LearningExtrasLoader(private val assets: AssetManager) {
         id = json.getString("id"),
         lessonId = json.getString("lessonId"),
         title = json.getString("title"),
-        description = json.getString("description"),
-        type = ExerciseType.valueOf(json.getString("type")),
-        difficulty = ExerciseDifficulty.valueOf(json.getString("difficulty")),
+        description = json.optString("description", json.optString("prompt")),
+        type = enumValue(json.optString("type", "READ_AND_ANSWER"), ExerciseType.READ_AND_ANSWER),
+        difficulty = enumValue(json.optString("difficulty", "EASY"), ExerciseDifficulty.EASY),
         starterCode = json.optString("starterCode").takeIf { it.isNotBlank() },
         expectedOutput = json.optString("expectedOutput").takeIf { it.isNotBlank() },
-        hints = json.optJSONArray("hints").toStringList(),
+        hints = json.optJSONArray("hints").toStringList().ifEmpty { json.optJSONArray("acceptance").toStringList() },
         solution = json.optString("solution").takeIf { it.isNotBlank() },
         explanation = json.optString("explanation").takeIf { it.isNotBlank() }
     )
 
     private fun parseQuiz(json: JSONObject): Quiz {
-        val questions = json.getJSONArray("questions")
+        val questions = json.optJSONArray("questions") ?: JSONArray()
         return Quiz(
             id = json.getString("id"),
             lessonId = json.optString("lessonId").takeIf { it.isNotBlank() },
@@ -78,7 +87,7 @@ class LearningExtrasLoader(private val assets: AssetManager) {
                 val answers = question.optJSONArray("answers") ?: JSONArray()
                 QuizQuestion(
                     id = question.getString("id"),
-                    type = QuestionType.valueOf(question.getString("type")),
+                    type = enumValue(question.optString("type", "MULTIPLE_CHOICE"), QuestionType.MULTIPLE_CHOICE),
                     question = question.getString("question"),
                     explanation = question.optString("explanation"),
                     tags = question.optJSONArray("tags").toStringList().toSet(),
@@ -101,16 +110,19 @@ class LearningExtrasLoader(private val assets: AssetManager) {
         title = json.getString("title"),
         summary = json.optString("summary"),
         difficulty = json.optString("difficulty", "BEGINNER"),
-        steps = json.optJSONArray("steps").toStringList()
+        steps = json.optJSONArray("steps").toStringList().ifEmpty { json.optJSONArray("deliverables").toStringList() }
     )
 
     private fun parseGlossary(json: JSONObject): GlossaryEntry = GlossaryEntry(
-        id = json.getString("id"),
+        id = json.optString("id").takeIf { it.isNotBlank() } ?: json.getString("term").lowercase().replace(" ", "-"),
         term = json.getString("term"),
-        translation = json.optString("translation"),
+        translation = json.optString("translation", json.optString("fa")),
         definition = json.getString("definition"),
         related = json.optJSONArray("related").toStringList()
     )
+
+    private inline fun <reified T : Enum<T>> enumValue(raw: String, fallback: T): T =
+        runCatching { enumValueOf<T>(raw.trim().uppercase()) }.getOrDefault(fallback)
 
     private fun JSONArray?.toStringList(): List<String> {
         if (this == null) return emptyList()
