@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DarkColorScheme
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -48,22 +47,19 @@ import com.asdevelopers.academy.core.settings.AcademySettingsRepository
 import com.asdevelopers.academy.course.model.CoursePackage
 import kotlinx.coroutines.launch
 
-/**
- * App Shell اصلی. تمام اپ‌های تک‌دوره‌ای فقط courseId و Pluginهای اختصاصی خود را به این Composable می‌دهند.
- */
+/** App Shell مشترک تمام اپ‌های تک‌دوره‌ای AS Academy. */
 @Composable
 fun AcademyCourseApp(courseId: String, codeRunner: CodeRunner? = null) {
     val context = LocalContext.current
     val settings = remember { AcademySettingsRepository(context.applicationContext) }
     val darkMode by settings.darkMode.collectAsState(initial = false)
-    val colors = if (darkMode) darkColorScheme() else lightColorScheme()
 
-    MaterialTheme(colorScheme = colors) {
+    MaterialTheme(colorScheme = if (darkMode) darkColorScheme() else lightColorScheme()) {
         var course by remember { mutableStateOf<CoursePackage?>(null) }
         var loadError by remember { mutableStateOf<String?>(null) }
         val db = remember(courseId) { AcademyDatabase.create(context, "as_academy_${courseId}.db") }
-        DisposableEffect(db) { onDispose { db.close() } }
 
+        DisposableEffect(db) { onDispose { db.close() } }
         LaunchedEffect(courseId) {
             runCatching { AssetCoursePackageLoader(context.assets).load(courseId) }
                 .onSuccess {
@@ -76,11 +72,12 @@ fun AcademyCourseApp(courseId: String, codeRunner: CodeRunner? = null) {
         when {
             loadError != null -> MessageScreen("خطا در بارگذاری دوره", loadError.orEmpty())
             course == null -> LoadingScreen()
-            else -> AcademyShell(course = requireNotNull(course), db = db, settings = settings, codeRunner = codeRunner)
+            else -> AcademyShell(requireNotNull(course), db, settings, codeRunner)
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AcademyShell(
     course: CoursePackage,
@@ -111,26 +108,24 @@ private fun AcademyShell(
     ) {
         Scaffold(
             topBar = {
-                @OptIn(ExperimentalMaterial3Api::class)
                 TopAppBar(
                     title = { Text(course.manifest.titleEn) },
-                    navigationIcon = { Button(onClick = { scope.launch { drawer.open() } }) { Text("☰") } }
+                    navigationIcon = {
+                        Button(onClick = { scope.launch { drawer.open() } }) { Text("☰") }
+                    }
                 )
             }
         ) { padding ->
             NavHost(navController = nav, startDestination = AcademyRoutes.HOME, modifier = Modifier.padding(padding)) {
                 composable(AcademyRoutes.HOME) { HomeScreen(course, nav) }
                 composable(AcademyRoutes.CHAPTERS) { back ->
-                    val id = back.arguments?.getString("levelId").orEmpty()
-                    ChapterScreen(course, id, nav)
+                    ChapterScreen(course, back.arguments?.getString("levelId").orEmpty(), nav)
                 }
                 composable(AcademyRoutes.LESSONS) { back ->
-                    val id = back.arguments?.getString("chapterId").orEmpty()
-                    LessonListScreen(course, id, nav)
+                    LessonListScreen(course, back.arguments?.getString("chapterId").orEmpty(), nav)
                 }
                 composable(AcademyRoutes.LESSON) { back ->
-                    val id = back.arguments?.getString("lessonId").orEmpty()
-                    LessonScreen(course, id, db, codeRunner)
+                    LessonScreen(course, back.arguments?.getString("lessonId").orEmpty(), db, codeRunner)
                 }
                 composable(AcademyRoutes.SEARCH) { SearchScreen(db, nav) }
                 composable(AcademyRoutes.BOOKMARKS) { BookmarkScreen(course, db, nav) }
@@ -190,29 +185,53 @@ private fun LessonScreen(course: CoursePackage, lessonId: String, db: AcademyDat
         item { Text(lesson.title, style = MaterialTheme.typography.headlineMedium) }
         item { Text(lesson.summary, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(lesson.blocks, key = { it.id }) { block ->
-            LessonBlockView(block, onRunCode = if (block.type.name == "CODE" && runner != null) { code ->
-                scope.launch {
-                    val result = runner.run(code)
-                    runOutput = if (result.success) result.output else result.error
-                }
-            } else null)
+            LessonBlockView(
+                block,
+                onRunCode = if (block.type.name == "CODE" && runner != null) { code ->
+                    scope.launch {
+                        val result = runner.run(code)
+                        runOutput = if (result.success) result.output else result.error
+                    }
+                } else null
+            )
         }
-        if (runOutput != null) item { Text("خروجی:\n${runOutput.orEmpty()}") }
+        runOutput?.let { output -> item { Text("خروجی:\n$output") } }
         item {
-            Button(onClick = {
-                scope.launch {
-                    db.progressDao().upsert(
-                        LessonProgressEntity(lessonId, 100, lesson.blocks.lastIndex.coerceAtLeast(0), 0, true, System.currentTimeMillis())
-                    )
-                }
-            }, modifier = Modifier.fillMaxWidth()) { Text("علامت‌گذاری به‌عنوان مطالعه‌شده") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        db.progressDao().upsert(
+                            LessonProgressEntity(
+                                lessonId = lessonId,
+                                progressPercent = 100,
+                                lastBlockIndex = lesson.blocks.lastIndex.coerceAtLeast(0),
+                                studySeconds = 0,
+                                completed = true,
+                                lastOpenedAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("علامت‌گذاری به‌عنوان مطالعه‌شده") }
         }
         item {
-            Button(onClick = {
-                scope.launch {
-                    db.bookmarkDao().upsert(BookmarkEntity("lesson:$lessonId", "LESSON", lessonId, lessonId, System.currentTimeMillis()))
-                }
-            }, modifier = Modifier.fillMaxWidth()) { Text("افزودن به علاقه‌مندی‌ها") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        db.bookmarkDao().upsert(
+                            BookmarkEntity(
+                                id = "lesson:$lessonId",
+                                targetType = "LESSON",
+                                targetId = lessonId,
+                                lessonId = lessonId,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("افزودن به علاقه‌مندی‌ها") }
         }
     }
 }
@@ -233,7 +252,9 @@ private fun BookmarkScreen(course: CoursePackage, db: AcademyDatabase, nav: NavH
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(bookmarks, key = { it.id }) { bookmark ->
             val title = course.lesson(bookmark.targetId)?.title ?: bookmark.targetId
-            AcademyCard(title, bookmark.targetType, onClick = { if (bookmark.targetType == "LESSON") nav.navigate(AcademyRoutes.lesson(bookmark.targetId)) })
+            AcademyCard(title, bookmark.targetType, onClick = {
+                if (bookmark.targetType == "LESSON") nav.navigate(AcademyRoutes.lesson(bookmark.targetId))
+            })
         }
     }
 }
@@ -243,12 +264,24 @@ private fun SearchScreen(db: AcademyDatabase, nav: NavHostController) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf(emptyList<com.asdevelopers.academy.core.database.SearchIndexEntity>()) }
+
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        androidx.compose.material3.OutlinedTextField(value = query, onValueChange = { query = it }, label = { Text("جستجو") }, modifier = Modifier.fillMaxWidth())
+        androidx.compose.material3.OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("جستجو") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Button(onClick = {
-            scope.launch { results = if (query.isBlank()) emptyList() else db.searchDao().search("${query.trim()}*") }
+            scope.launch {
+                results = if (query.isBlank()) emptyList() else db.searchDao().search("${query.trim()}*")
+            }
         }) { Text("جستجو") }
-        results.forEach { result -> AcademyCard(result.title, result.refType, onClick = { if (result.refType == "LESSON") nav.navigate(AcademyRoutes.lesson(result.refId)) }) }
+        results.forEach { result ->
+            AcademyCard(result.title, result.refType, onClick = {
+                if (result.refType == "LESSON") nav.navigate(AcademyRoutes.lesson(result.refId))
+            })
+        }
     }
 }
 
@@ -258,7 +291,9 @@ private fun SettingsScreen(settings: AcademySettingsRepository) {
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium)
-        Button(onClick = { scope.launch { settings.setDarkMode(!dark) } }) { Text(if (dark) "حالت روشن" else "حالت تاریک") }
+        Button(onClick = { scope.launch { settings.setDarkMode(!dark) } }) {
+            Text(if (dark) "حالت روشن" else "حالت تاریک")
+        }
     }
 }
 
@@ -273,7 +308,17 @@ private fun AboutScreen(course: CoursePackage) {
 }
 
 @Composable
-private fun LoadingScreen() { Column(Modifier.fillMaxSize().padding(32.dp)) { CircularProgressIndicator(); Text("در حال بارگذاری دوره...") } }
+private fun LoadingScreen() {
+    Column(Modifier.fillMaxSize().padding(32.dp)) {
+        CircularProgressIndicator()
+        Text("در حال بارگذاری دوره...")
+    }
+}
 
 @Composable
-private fun MessageScreen(title: String, message: String) { Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text(title, style = MaterialTheme.typography.headlineSmall); Text(message) } }
+private fun MessageScreen(title: String, message: String) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text(message)
+    }
+}
