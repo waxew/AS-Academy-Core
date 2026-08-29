@@ -1,0 +1,10 @@
+[
+  {
+    "id": "course-fundamentals-intro",
+    "levelId": "course-fundamentals",
+    "title": "شروع دوره",
+    "description": "معرفی مسیر یادگیری",
+    "order": 0,
+    "prerequisites": []
+  }
+]

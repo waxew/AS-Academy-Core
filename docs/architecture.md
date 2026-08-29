@@ -1,80 +1,80 @@
-# معماری کل AS Academy
+# معماری AS Academy Core
 
 ## هدف
-`AS-Academy-Core` تنها مرجع کدهای مشترک تمام اپ‌های آموزشی است. اپ‌های دوره‌ای نباید Navigation، Database، Progress، Quiz، Exercise، Search، Bookmark، Settings، Drawer/Profile، Content Engine یا سایر قابلیت‌های عمومی را کپی کنند.
 
-## معماری
-```text
-AS Academy Platform
-        |
-        +-- AS Academy Core
-        |    +-- App Shell
-        |    +-- Design System
-        |    +-- Navigation
-        |    +-- Database
-        |    +-- Content Engine
-        |    +-- Progress
-        |    +-- Quiz / Exercise / Project
-        |    +-- Search / Bookmark / Glossary
-        |    +-- Profile / Settings / Drawer
-        |    +-- Update / Backup
-        |    +-- Capability Plugins
-        |
-        +-- Course Repositories
-             +-- JavaScript
-             +-- Python
-             +-- Java
-             +-- C
-             +-- C++
-             +-- C#
-             +-- PHP
-             +-- Kotlin
-             +-- Web / Database / Electronics / MikroTik / ...
+`AS-Academy-Core` پلتفرم مشترک اپ‌های آموزشی است، نه یک Course خاص. طراحی به‌گونه‌ای است که یک اپ مستقل JavaScript و یک اپ All-in-One چنددوره‌ای هر دو همان Runtime و موتورهای عمومی را مصرف کنند.
+
+## جهت وابستگی
+
+```mermaid
+flowchart TD
+    Course["course: قرارداد محتوا"] --> Engine["engine: منطق آموزشی"]
+    Engine --> Core["core: Runtime اندروید"]
+    Engine --> Tools["tools: CLI محتوا"]
+    Core --> Host["اپ دوره"]
+    Core --> Sample["sample-app"]
 ```
 
-## تکنولوژی استاندارد Android
-- Kotlin
-- Jetpack Compose
-- MVVM
-- Room
-- DataStore
-- Coroutines + Flow
-- Navigation Compose
-- WorkManager
-- Hilt در صورت نیاز
+هیچ ماژول پایین‌دستی نباید به Host یا Course خاص وابسته شود. `course` و `engine` عمداً Kotlin/JVM هستند تا Validator و ابزار انتشار بدون Android SDK اجرا شوند.
+
+## مرزها
+
+### Core مالک چیست؟
+
+- App Shell، Navigation و Design System
+- Room schema، DAO، Migration و Repository
+- Profile، Settings، Drawer، About و Study Reminder
+- Content decode/validation/import/update/rollback
+- Lesson Renderer، Progress، Quiz، Exercise، Project، Search و Achievement
+- Bookmark، User Note، Backup/Restore و Code Runner contract
+
+### Course مالک چیست؟
+
+- سرفصل، درس، Quiz، Exercise، Project و Glossary همان موضوع
+- Asset، منبع، رنگ و هویت بصری همان دوره
+- Capability configuration
+- Adapter اختصاصی موضوع؛ مثلاً Runner امن JavaScript یا Viewer مدار
+
+Course حق ساخت نسخه محلی از APIهای Core را ندارد. اگر Core یک Slot یا Plugin مورد نیاز را ندارد، ابتدا قرارداد عمومی آن در Core اضافه می‌شود.
+
+## جریان محتوا
+
+```mermaid
+flowchart LR
+    Editable["فایل‌های پوشه Course"] --> CLI["Validator / Compiler"]
+    CLI --> Bundle["bundle.json"]
+    Bundle --> Loader["Android Loader"]
+    Loader --> UI["Renderer و Engineها"]
+    Loader --> Index["Room FTS Index"]
+```
+
+CLI و Android Loader از `CoursePackageCodec` و `CoursePackageValidator` یکسان استفاده می‌کنند؛ بنابراین محتوایی که CI پذیرفته با قواعد متفاوتی در Runtime روبه‌رو نمی‌شود.
+
+## جریان داده کاربر
+
+```text
+Compose UI -> ViewModel/State holder در Host -> Core Repository -> Room/DataStore
+```
+
+UI نباید DAO را مستقیم صدا بزند. Course Package داده قابل بازسازی است، اما Progress، Note، Draft و نتیجه Quiz داده کاربرند و در Migration یا Content Update حذف نمی‌شوند.
 
 ## Offline First
-درس، آزمون، تمرین، جستجو، Bookmark و Progress باید بدون اینترنت کار کنند. اینترنت برای Content Update، App Update و Cloud Sync اختیاری آینده استفاده می‌شود.
 
-## لایه‌ها
-```text
-UI -> ViewModel -> Domain/UseCase -> Repository -> Room / Course Package
-```
-UI نباید مستقیماً به DAO یا فایل محتوای خام وابسته باشد.
+Bundle اولیه داخل assets اپ قرار می‌گیرد. درس، جست‌وجو، Bookmark، آزمون، تمرین، Progress و Backup بدون شبکه کار می‌کنند. شبکه فقط یک Source اختیاری برای دریافت Bundle جدید یا Sync آینده است؛ Core به سرویس مشخصی قفل نشده است.
 
-## قابلیت‌های Core
-- Dynamic Lesson Renderer
-- Progress Engine
-- Quiz Engine
-- Exercise Engine
-- Project Engine
-- Search Engine
-- Bookmark Engine
-- Glossary Engine
-- Achievement/Streak
-- Code Runner Framework
-- Diagram/Terminal/SQL plugin hooks
-- Content Import/Validation/Update/Rollback
-- Backup/Restore
-- App Update abstraction
+## توسعه قابلیت اختصاصی
 
-## قانون عدم تکرار
-هر قابلیت قابل استفاده در حداقل دو دوره باید به Core منتقل شود. ریپوهای دوره‌ای فقط Adapter/Configuration و محتوای اختصاصی نگه می‌دارند.
+قابلیت‌های عمومی از APIهای کوچک قابل تزریق استفاده می‌کنند. برای نمونه، هر زبان `CodeRunnerPlugin` خود را ثبت می‌کند، اما Request/Result، Timeout metadata و Registry در Core باقی می‌مانند. همین الگو برای Asset renderer یا destinationهای Navigation اختصاصی قابل استفاده است.
 
-## مدل انتشار
-دو مدل روی همین Core پشتیبانی می‌شود:
-1. Standalone App مانند AS Academy JavaScript
-2. All-in-One App آینده با چند Course Package
+## محورهای نسخه
 
-## سازگاری و داده
-App Version، Core Version، Database Version، Content Schema Version و Course Version مستقل‌اند. Migration مخرب برای داده کاربر مجاز نیست.
+| محور | محل | کاربرد |
+|---|---|---|
+| Core API | `CoreVersion.CURRENT` | سازگاری Runtime |
+| Database | `@Database(version = 3)` | Migration داده کاربر و یکسان‌سازی شاخه‌های آزمایشی |
+| Course Schema | `CoreVersion.COURSE_SCHEMA` | شکل JSON قابل خواندن |
+| Course Content | `manifest.version` | انتشار محتوای یک دوره |
+| Curriculum | `manifest.curriculumVersion` | تغییر برنامه آموزشی |
+| App | `versionName/versionCode` Host | انتشار فروشگاه |
+
+این شماره‌ها نباید به جای یکدیگر استفاده شوند.

@@ -1,0 +1,17 @@
+# Changelog
+
+همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
+
+## 1.0.0 — 2026-08-29
+
+### Added
+
+- معماری چندماژولی `course`، `engine`، `core`، `tools` و `sample-app`
+- قرارداد JSON نسخه‌دار برای Manifest، Branding، Level، Chapter، Lesson، Quiz، Exercise، Project، Glossary، Asset و Reference
+- Validator و Compiler خط فرمان برای Course Package
+- موتورهای Progress، Continue Learning، Level unlocking، Quiz، Exercise، Project، Achievement، Search، Code Runner و Content Update
+- Runtime اندروید شامل Room، Repositoryها، DataStore، Navigation Compose، Design System، Drawer/Profile، Settings و Lesson Renderer
+- Backup/Restore تراکنشی، نصب محتوای Atomic، SHA-256 و Rollback
+- ثبت تکمیل Exercise/Project در Repository و Backup/Restore schema v2 با پشتیبانی خواندن v1
+- Migration غیرمخرب دیتابیس از نسخه 1 تا 3، شامل یکسان‌سازی دو Schema آزمایشی v2 و اتصال داده Legacy هنگام Import
+- Sample Course اجرایی، Unit Testها و GitHub Actions

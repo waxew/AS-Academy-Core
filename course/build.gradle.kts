@@ -1,17 +1,25 @@
 plugins {
-    alias(libs.plugins.android.library)
+    // این ماژول Android نیست تا ابزارهای دسکتاپ و CI تولید محتوا نیز قرارداد Course را مصرف کنند.
+    `java-library`
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
-android {
-    namespace = "com.asdevelopers.academy.course"
-    compileSdk = 37
+kotlin {
+    // JDK 17 نسخه مشترک توسعه محلی، GitHub Actions و Android build است.
+    jvmToolchain(17)
+}
 
-    defaultConfig {
-        minSdk = 23
-    }
+dependencies {
+    // JSON قرارداد رسمی Course Package با kotlinx.serialization خوانده و نوشته می‌شود.
+    api(libs.kotlinx.serialization.json)
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    // تست قراردادها بدون نیاز به Android Emulator اجرا می‌شود.
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.junit.jupiter)
+}
+
+tasks.test {
+    // JUnit Platform گزارش استاندارد و قابل استفاده در CI تولید می‌کند.
+    useJUnitPlatform()
 }

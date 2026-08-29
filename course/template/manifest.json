@@ -4,8 +4,12 @@
   "titleEn": "Course Title",
   "version": "0.1.0",
   "contentSchemaVersion": 1,
-  "minimumCoreVersion": "0.1.0",
+  "minimumCoreVersion": "1.0.0",
   "rtl": true,
+  "defaultLocale": "fa",
+  "supportedLocales": ["fa"],
+  "curriculumVersion": "0.1.0",
+  "publisherId": "as-team",
   "capabilities": {
     "codeRunner": false,
     "terminalExamples": false,
@@ -13,6 +17,10 @@
     "quizzes": true,
     "exercises": true,
     "projects": true,
-    "glossary": true
+    "glossary": true,
+    "bookmarks": true,
+    "userNotes": true,
+    "achievements": true,
+    "offlineContent": true
   }
 }

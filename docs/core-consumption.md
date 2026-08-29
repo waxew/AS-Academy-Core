@@ -1,20 +1,17 @@
-# روش مصرف Core در ریپوهای دوره‌ای
+# روش مصرف Core در Repositoryهای دوره‌ای
 
-روش استاندارد فعلی Git submodule است تا سورس مشترک کپی نشود و هر اپ روی Commit مشخصی از Core قفل شود.
+این نام فایل برای حفظ لینک مستندات قبلی نگه داشته شده است. راهنمای canonical و به‌روز در [core-usage.md](core-usage.md) قرار دارد.
 
-## ساختار اپ دوره‌ای
-```text
-repo/
-├── academy-core/      # Git submodule -> AS-Academy-Core
-├── app/
-├── course-<id>/
-└── course/<id>/       # JSON/Assets اختصاصی
+روش رسمی فعلی، نگهداری Core به‌صورت checkout مجاور یا Git submodule و اتصال آن با Gradle Composite Build است. Course app فقط مختصات زیر را مصرف می‌کند و هیچ ماژول Core را کپی یا با مسیر داخلی Map نمی‌کند:
+
+```kotlin
+// settings.gradle.kts
+includeBuild("../AS-Academy-Core")
+
+// app/build.gradle.kts
+dependencies {
+    implementation("com.asdevelopers.academy:core:1.0.0")
+}
 ```
 
-در `settings.gradle.kts`، ماژول‌های `academy-core/course` و `academy-core/core` به پروژه اصلی Map می‌شوند. Version Catalog نیز مستقیماً از `academy-core/gradle/libs.versions.toml` خوانده می‌شود. بنابراین نسخه‌های Android/Kotlin/Compose در Course repo تکرار نمی‌شوند.
-
-هر بار که منطق عمومی تغییر می‌کند:
-1. تغییر در AS-Academy-Core انجام می‌شود.
-2. CI Core باید سبز باشد.
-3. Submodule دوره‌ها به Commit جدید Core ارتقا داده می‌شود.
-4. Course repo فقط سازگاری و محتوای اختصاصی خود را تست می‌کند.
+جزئیات ساخت Course Package، اجرای CLI و Checklist انتقال پروژه JavaScript در [integration-guide.md](integration-guide.md) توضیح داده شده است.

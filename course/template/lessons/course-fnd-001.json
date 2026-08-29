@@ -1,0 +1,24 @@
+{
+  "id": "course-fnd-001",
+  "chapterId": "course-fundamentals-intro",
+  "title": "اولین درس",
+  "summary": "این فایل را با محتوای واقعی دوره جایگزین کنید.",
+  "order": 0,
+  "estimatedMinutes": 10,
+  "tags": ["intro"],
+  "prerequisites": [],
+  "blocks": [
+    {
+      "id": "course-fnd-001-title",
+      "type": "TITLE",
+      "content": "اولین درس",
+      "metadata": {}
+    },
+    {
+      "id": "course-fnd-001-body",
+      "type": "PARAGRAPH",
+      "content": "محتوای آموزشی اینجا نوشته می‌شود.",
+      "metadata": {}
+    }
+  ]
+}

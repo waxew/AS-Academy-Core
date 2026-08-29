@@ -1,0 +1,11 @@
+{
+  "id": "course-ex-001",
+  "courseId": "replace-me",
+  "lessonId": "course-fnd-001",
+  "title": "تمرین نمونه",
+  "description": "یک پاسخ کوتاه بنویسید.",
+  "type": "READ_AND_ANSWER",
+  "difficulty": "EASY",
+  "hints": ["محتوای درس را مرور کنید."],
+  "tags": ["intro"]
+}

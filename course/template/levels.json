@@ -1,0 +1,10 @@
+[
+  {
+    "id": "course-fundamentals",
+    "courseId": "replace-me",
+    "type": "FUNDAMENTALS",
+    "title": "مبانی",
+    "order": 0,
+    "description": "آشنایی و آماده‌سازی ابزارها"
+  }
+]

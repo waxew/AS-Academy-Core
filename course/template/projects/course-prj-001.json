@@ -1,0 +1,19 @@
+{
+  "id": "course-prj-001",
+  "courseId": "replace-me",
+  "title": "پروژه نمونه",
+  "description": "یک خروجی کوچک بر اساس درس بسازید.",
+  "difficulty": "EASY",
+  "estimatedMinutes": 30,
+  "relatedLessonIds": ["course-fnd-001"],
+  "milestones": [
+    {
+      "id": "course-prj-001-step-01",
+      "title": "ساخت خروجی اولیه",
+      "description": "نسخه اولیه را آماده کنید.",
+      "order": 0,
+      "acceptanceCriteria": ["خروجی بدون خطا آماده باشد."]
+    }
+  ],
+  "tags": ["intro"]
+}

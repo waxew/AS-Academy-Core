@@ -1,0 +1,22 @@
+{
+  "id": "course-qz-001",
+  "courseId": "replace-me",
+  "lessonId": "course-fnd-001",
+  "chapterId": "course-fundamentals-intro",
+  "title": "آزمون اولین درس",
+  "passingScorePercent": 70,
+  "questions": [
+    {
+      "id": "course-qz-001-q01",
+      "type": "MULTIPLE_CHOICE",
+      "question": "نمونه سؤال چیست؟",
+      "explanation": "توضیح پاسخ پس از ثبت جواب نمایش داده می‌شود.",
+      "tags": ["intro"],
+      "points": 1,
+      "answers": [
+        {"id": "course-qz-001-a01", "text": "پاسخ درست", "isCorrect": true},
+        {"id": "course-qz-001-a02", "text": "پاسخ نادرست", "isCorrect": false}
+      ]
+    }
+  ]
+}

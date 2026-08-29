@@ -1,0 +1,11 @@
+[
+  {
+    "id": "course-glossary-intro",
+    "courseId": "replace-me",
+    "term": "مقدمه",
+    "definition": "بخش آغازین مسیر آموزش.",
+    "aliases": [],
+    "relatedLessonIds": ["course-fnd-001"],
+    "tags": ["intro"]
+  }
+]
