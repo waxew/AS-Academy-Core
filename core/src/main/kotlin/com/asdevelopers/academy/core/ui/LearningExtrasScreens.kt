@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,23 +25,28 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.asdevelopers.academy.core.content.LearningExtras
 import com.asdevelopers.academy.core.database.AcademyDatabase
+import com.asdevelopers.academy.core.database.LearningCompletionEntity
 import com.asdevelopers.academy.core.database.QuizResultEntity
 import kotlinx.coroutines.launch
 
 /** UI عمومی Exercise/Quiz/Project/Glossary؛ Course فقط داده فراهم می‌کند. */
 @Composable
-internal fun ExerciseListScreen(extras: LearningExtras, nav: NavHostController) {
+internal fun ExerciseListScreen(extras: LearningExtras, nav: NavHostController, db: AcademyDatabase) {
+    val completed by db.learningCompletionDao().observeAll().collectAsState(initial = emptyList())
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("تمرین‌ها", style = MaterialTheme.typography.headlineMedium) }
         items(extras.exercises, key = { it.id }) { exercise ->
-            AcademyCard(exercise.title, exercise.difficulty.name, onClick = { nav.navigate(AcademyRoutes.exercise(exercise.id)) })
+            val done = completed.any { it.targetType == "EXERCISE" && it.targetId == exercise.id && it.completed }
+            AcademyCard(exercise.title, "${exercise.difficulty.name}${if (done) " • تکمیل شده" else ""}", onClick = { nav.navigate(AcademyRoutes.exercise(exercise.id)) })
         }
     }
 }
 
 @Composable
-internal fun ExerciseDetailScreen(extras: LearningExtras, exerciseId: String) {
+internal fun ExerciseDetailScreen(extras: LearningExtras, exerciseId: String, db: AcademyDatabase) {
     val exercise = extras.exercises.firstOrNull { it.id == exerciseId } ?: return
+    val scope = rememberCoroutineScope()
+    val completion by db.learningCompletionDao().observe("EXERCISE", exerciseId).collectAsState(initial = null)
     var showHint by remember(exerciseId) { mutableIntStateOf(0) }
     var showSolution by remember(exerciseId) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -56,15 +62,23 @@ internal fun ExerciseDetailScreen(extras: LearningExtras, exerciseId: String) {
             exercise.explanation?.let { explanation -> item { Text(explanation) } }
             exercise.expectedOutput?.let { expected -> item { Text("خروجی مورد انتظار: $expected") } }
         }
+        item {
+            Button(onClick = { scope.launch { db.learningCompletionDao().upsert(LearningCompletionEntity("EXERCISE:$exerciseId", "EXERCISE", exerciseId, true, System.currentTimeMillis())) } }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (completion?.completed == true) "تمرین تکمیل شده ✓" else "ثبت تکمیل تمرین")
+            }
+        }
     }
 }
 
 @Composable
-internal fun QuizListScreen(extras: LearningExtras, nav: NavHostController) {
+internal fun QuizListScreen(extras: LearningExtras, nav: NavHostController, db: AcademyDatabase) {
+    val attempts by db.quizResultDao().observeAll().collectAsState(initial = emptyList())
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("آزمون‌ها", style = MaterialTheme.typography.headlineMedium) }
         items(extras.quizzes, key = { it.id }) { quiz ->
-            AcademyCard(quiz.title, "${quiz.questions.size} سؤال • حدنصاب ${quiz.passingScorePercent}%", onClick = { nav.navigate(AcademyRoutes.quiz(quiz.id)) })
+            val best = attempts.filter { it.quizId == quiz.id }.maxOfOrNull { it.scorePercent }
+            val result = best?.let { " • بهترین نتیجه $it%" }.orEmpty()
+            AcademyCard(quiz.title, "${quiz.questions.size} سؤال • حدنصاب ${quiz.passingScorePercent}%$result", onClick = { nav.navigate(AcademyRoutes.quiz(quiz.id)) })
         }
     }
 }
@@ -84,7 +98,7 @@ internal fun QuizDetailScreen(extras: LearningExtras, quizId: String, db: Academ
         if (finished) {
             val percent = if (quiz.questions.isEmpty()) 0 else (correctCount * 100) / quiz.questions.size
             Text("نتیجه: $correctCount از ${quiz.questions.size} — $percent%", style = MaterialTheme.typography.titleLarge)
-            Text(if (percent >= quiz.passingScorePercent) "قبول شدید." else "برای تسلط بیشتر، درس‌های مرتبط را مرور کنید.")
+            Text(if (percent >= quiz.passingScorePercent) "آزمون با موفقیت گذرانده شد." else "برای تسلط بیشتر، درس‌های مرتبط را مرور کنید.")
         } else if (question != null) {
             Text("سؤال ${index + 1} از ${quiz.questions.size}")
             Text(question.question, style = MaterialTheme.typography.titleLarge)
@@ -111,19 +125,29 @@ internal fun QuizDetailScreen(extras: LearningExtras, quizId: String, db: Academ
 }
 
 @Composable
-internal fun ProjectListScreen(extras: LearningExtras, nav: NavHostController) {
+internal fun ProjectListScreen(extras: LearningExtras, nav: NavHostController, db: AcademyDatabase) {
+    val completed by db.learningCompletionDao().observeAll().collectAsState(initial = emptyList())
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("پروژه‌های عملی", style = MaterialTheme.typography.headlineMedium) }
-        items(extras.projects, key = { it.id }) { project -> AcademyCard(project.title, "${project.difficulty} • ${project.steps.size} مرحله", onClick = { nav.navigate(AcademyRoutes.project(project.id)) }) }
+        items(extras.projects, key = { it.id }) { project ->
+            val done = completed.any { it.targetType == "PROJECT" && it.targetId == project.id && it.completed }
+            AcademyCard(project.title, "${project.difficulty} • ${project.steps.size} مرحله${if (done) " • تکمیل شده" else ""}", onClick = { nav.navigate(AcademyRoutes.project(project.id)) })
+        }
     }
 }
 
 @Composable
-internal fun ProjectDetailScreen(extras: LearningExtras, projectId: String) {
+internal fun ProjectDetailScreen(extras: LearningExtras, projectId: String, db: AcademyDatabase) {
     val project = extras.projects.firstOrNull { it.id == projectId } ?: return
+    val scope = rememberCoroutineScope()
+    val completion by db.learningCompletionDao().observe("PROJECT", projectId).collectAsState(initial = null)
     LazyColumn(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text(project.title, style = MaterialTheme.typography.headlineMedium) }; item { Text(project.summary) }; item { Text("سطح: ${project.difficulty}") }; item { Text("مراحل پروژه", style = MaterialTheme.typography.titleLarge) }
+        item { Text(project.title, style = MaterialTheme.typography.headlineMedium) }
+        item { Text(project.summary) }
+        item { Text("سطح: ${project.difficulty}") }
+        item { Text("مراحل پروژه", style = MaterialTheme.typography.titleLarge) }
         items(project.steps.mapIndexed { i, step -> "${i + 1}. $step" }) { step -> Text(step) }
+        item { Button(onClick = { scope.launch { db.learningCompletionDao().upsert(LearningCompletionEntity("PROJECT:$projectId", "PROJECT", projectId, true, System.currentTimeMillis())) } }, modifier = Modifier.fillMaxWidth()) { Text(if (completion?.completed == true) "پروژه تکمیل شده ✓" else "ثبت تکمیل پروژه") } }
     }
 }
 
