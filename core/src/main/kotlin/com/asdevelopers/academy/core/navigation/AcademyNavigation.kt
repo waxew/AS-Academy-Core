@@ -12,13 +12,30 @@ object AcademyRoutes {
     const val SETTINGS = "academy/settings"
     const val ABOUT = "academy/about"
     const val LESSON = "academy/lesson/{lessonId}"
+    const val QUIZ = "academy/quiz/{quizId}"
+    const val EXERCISE = "academy/exercise/{exerciseId}"
+    const val PROJECT = "academy/project/{projectId}"
 
     /** ساخت Route درس در یک مکان از خطای encode شناسه جلوگیری می‌کند. */
-    fun lesson(lessonId: String): String = "academy/lesson/${java.net.URLEncoder.encode(lessonId, Charsets.UTF_8.name())}"
+    fun lesson(lessonId: String): String = "academy/lesson/${encode(lessonId)}"
+
+    /** Quiz نیز با Stable ID و encode مرکزی باز می‌شود. */
+    fun quiz(quizId: String): String = "academy/quiz/${encode(quizId)}"
+
+    /** Exercise Route منطق ساخت URL را در Courseها تکرار نمی‌کند. */
+    fun exercise(exerciseId: String): String = "academy/exercise/${encode(exerciseId)}"
+
+    /** Project Route برای تمام Courseها قرارداد یکسان دارد. */
+    fun project(projectId: String): String = "academy/project/${encode(projectId)}"
+
+    /** شناسه‌های محتوا قبل از قرار گرفتن در Route به شکل امن encode می‌شوند. */
+    private fun encode(value: String): String =
+        java.net.URLEncoder.encode(value, Charsets.UTF_8.name())
 }
 
 /**
- * NavHost پایه صفحه‌های عمومی را ثبت می‌کند و Course فقط destinationهای اختصاصی را به Builder می‌افزاید.
+ * NavHost پایه صفحه‌های عمومی و فعالیت‌های یادگیری را ثبت می‌کند.
+ * Course فقط مدل محتوا را پیدا می‌کند و Composable مشترک متناظر را به Slot می‌دهد.
  */
 @Composable
 fun AcademyNavHost(
@@ -27,22 +44,51 @@ fun AcademyNavHost(
     settings: @Composable () -> Unit,
     about: @Composable () -> Unit,
     lesson: @Composable (lessonId: String) -> Unit,
+    quiz: @Composable (quizId: String) -> Unit = {},
+    exercise: @Composable (exerciseId: String) -> Unit = {},
+    project: @Composable (projectId: String) -> Unit = {},
     additionalGraph: NavGraphBuilder.() -> Unit = {}
 ) {
+    // تمام مقصدهای مشترک در یک Graph قرار می‌گیرند تا Back behavior بین Courseها یکسان بماند.
     NavHost(navController = navController, startDestination = AcademyRoutes.HOME) {
+        // صفحه اصلی توسط Host هر Course تأمین می‌شود.
         composable(AcademyRoutes.HOME) { home() }
+        // Settings و About UI مشترک دارند اما داده/Branding از Host می‌آید.
         composable(AcademyRoutes.SETTINGS) { settings() }
         composable(AcademyRoutes.ABOUT) { about() }
+        // Stable ID درس decode و سپس به Host داده می‌شود.
         composable(AcademyRoutes.LESSON) { entry ->
-            // نبود شناسه به رشته خالی تبدیل نمی‌شود؛ مقصد با ورودی نامعتبر به Home بازمی‌گردد.
             val lessonId = entry.arguments?.getString("lessonId")
-            if (lessonId == null) home() else lesson(java.net.URLDecoder.decode(lessonId, Charsets.UTF_8.name()))
+            if (lessonId == null) home() else lesson(decode(lessonId))
         }
+        // Stable ID آزمون به Screen عمومی Quiz متصل می‌شود.
+        composable(AcademyRoutes.QUIZ) { entry ->
+            val quizId = entry.arguments?.getString("quizId")
+            if (quizId == null) home() else quiz(decode(quizId))
+        }
+        // Stable ID تمرین به workflow عمومی Exercise متصل می‌شود.
+        composable(AcademyRoutes.EXERCISE) { entry ->
+            val exerciseId = entry.arguments?.getString("exerciseId")
+            if (exerciseId == null) home() else exercise(decode(exerciseId))
+        }
+        // Stable ID پروژه به workflow عمومی Project متصل می‌شود.
+        composable(AcademyRoutes.PROJECT) { entry ->
+            val projectId = entry.arguments?.getString("projectId")
+            if (projectId == null) home() else project(decode(projectId))
+        }
+        // Course هنوز می‌تواند مقصد واقعاً اختصاصی خودش را بدون Fork کردن NavHost اضافه کند.
         additionalGraph()
     }
 }
 
-/** Navigation به صفحات عمومی جایگزین ساخت Route دستی در Drawer می‌شود. */
+/** Decode شناسه در تمام Routeها با یک روش انجام می‌شود. */
+private fun decode(value: String): String =
+    java.net.URLDecoder.decode(value, Charsets.UTF_8.name())
+
+/** Navigation به صفحات عمومی جایگزین ساخت Route دستی در Drawer و Lesson می‌شود. */
 fun NavHostController.openSettings() = navigate(AcademyRoutes.SETTINGS) { launchSingleTop = true }
 fun NavHostController.openAbout() = navigate(AcademyRoutes.ABOUT) { launchSingleTop = true }
 fun NavHostController.openLesson(lessonId: String) = navigate(AcademyRoutes.lesson(lessonId)) { launchSingleTop = true }
+fun NavHostController.openQuiz(quizId: String) = navigate(AcademyRoutes.quiz(quizId)) { launchSingleTop = true }
+fun NavHostController.openExercise(exerciseId: String) = navigate(AcademyRoutes.exercise(exerciseId)) { launchSingleTop = true }
+fun NavHostController.openProject(projectId: String) = navigate(AcademyRoutes.project(projectId)) { launchSingleTop = true }
