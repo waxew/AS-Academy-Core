@@ -15,6 +15,16 @@ data class LessonProgressEntity(
     val lastOpenedAt: Long
 )
 
+/** تکمیل آیتم‌های آموزشی غیر درسی مثل Exercise و Project. */
+@Entity(tableName = "learning_completion")
+data class LearningCompletionEntity(
+    @PrimaryKey val key: String,
+    val targetType: String,
+    val targetId: String,
+    val completed: Boolean,
+    val completedAt: Long
+)
+
 /** Bookmark می‌تواند به درس، کد، تمرین، پروژه یا واژه‌نامه اشاره کند. */
 @Entity(tableName = "bookmarks")
 data class BookmarkEntity(
