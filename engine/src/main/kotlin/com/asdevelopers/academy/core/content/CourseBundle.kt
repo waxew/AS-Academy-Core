@@ -9,6 +9,7 @@ import com.asdevelopers.academy.course.model.CourseBranding
 import com.asdevelopers.academy.course.model.CourseLevel
 import com.asdevelopers.academy.course.model.CourseManifest
 import com.asdevelopers.academy.course.model.CourseReference
+import com.asdevelopers.academy.course.model.Flashcard
 import com.asdevelopers.academy.course.model.GlossaryEntry
 import com.asdevelopers.academy.course.model.Lesson
 import kotlinx.serialization.Serializable
@@ -29,5 +30,9 @@ data class CourseBundle(
     val projects: List<LearningProject> = emptyList(),
     val glossary: List<GlossaryEntry> = emptyList(),
     val assets: List<CourseAsset> = emptyList(),
-    val references: List<CourseReference> = emptyList()
+    val references: List<CourseReference> = emptyList(),
+    /**
+     * در انتهای قرارداد و با مقدار پیش‌فرض افزوده شده تا Bundleهای قدیمی و مصرف‌کننده‌های positional قبلی نشکنند.
+     */
+    val flashcards: List<Flashcard> = emptyList()
 )
