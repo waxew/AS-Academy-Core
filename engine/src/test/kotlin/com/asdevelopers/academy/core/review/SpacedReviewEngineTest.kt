@@ -29,6 +29,14 @@ class SpacedReviewEngineTest {
     }
 
     @Test
+    fun `utc epoch day conversion is shared and boundary safe`() {
+        assertEquals(0, SpacedReviewEngine.utcEpochDay(0))
+        assertEquals(0, SpacedReviewEngine.utcEpochDay(86_399_999))
+        assertEquals(1, SpacedReviewEngine.utcEpochDay(86_400_000))
+        assertEquals(-1, SpacedReviewEngine.utcEpochDay(-1))
+    }
+
+    @Test
     fun `good reviews expand interval while again resets repetitions`() {
         val day = 20_000L
         val first = SpacedReviewEngine.schedule(
