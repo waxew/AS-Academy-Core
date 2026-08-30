@@ -11,5 +11,5 @@ plugins {
 // این مختصات در Composite Build و انتشارهای آینده، وابستگی پروژه‌های Course را پایدار نگه می‌دارد.
 allprojects {
     group = "com.asdevelopers.academy"
-    version = "1.0.0"
+    version = "1.0.1"
 }
