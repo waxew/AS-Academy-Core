@@ -71,6 +71,15 @@ jobs:
       - name: Build the reference application
         run: ./gradlew :sample-app:assembleDebug --stacktrace
 
+      # Snapshot تولیدشده Room حتی در اجرای fail نگه داشته می‌شود تا همان خروجی تولیدی بدون حدس Commit شود.
+      - name: Upload generated Room schemas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: room-schemas
+          path: core/schemas
+          if-no-files-found: error
+
       - name: Verify Room schema snapshots are committed
         shell: bash
         run: |
