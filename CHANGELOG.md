@@ -2,6 +2,24 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.3.0 — 2026-08-30
+
+### Added
+
+- `AcademyLearningCatalogScreen` برای جست‌وجو و مرور یکپارچه همه Quiz، Exercise و Projectهای `CourseBundle`.
+- Filter مشترک All / Quiz / Exercise / Project و نمایش تعداد نتیجه، metadata و action استاندارد هر Activity.
+- Route عمومی `AcademyRoutes.LEARNING_CATALOG` با مسیر `academy/catalog`.
+- helper عمومی `NavHostController.openLearningCatalog()`.
+- Slot اختیاری `learningCatalog` در `AcademyNavHost` با مقدار پیش‌فرض؛ Courseهای قبلی بدون تغییر source سازگار می‌مانند.
+- Reference Composable در Sample App برای Compile کردن مصرف واقعی Catalog API.
+- مستندات اتصال Catalog در `core-usage.md` و `integration-guide.md`.
+
+### Changed
+
+- نسخه عمومی Core و مختصات تمام ماژول‌ها به `1.3.0` افزایش یافت.
+- Courseهای دارای بانک بزرگ Quiz/Exercise/Project باید به‌جای UI فهرست تکراری، Catalog مشترک Core را مصرف کنند.
+- Room database schema روی v4 و Backup schema روی v3 باقی می‌مانند؛ این نسخه هیچ Migration داده‌ای نیاز ندارد.
+
 ## 1.2.0 — 2026-08-30
 
 ### Added
