@@ -9,6 +9,7 @@ import com.asdevelopers.academy.course.model.CourseBranding
 import com.asdevelopers.academy.course.model.CourseLevel
 import com.asdevelopers.academy.course.model.CourseManifest
 import com.asdevelopers.academy.course.model.CourseReference
+import com.asdevelopers.academy.course.model.Flashcard
 import com.asdevelopers.academy.course.model.GlossaryEntry
 import com.asdevelopers.academy.course.model.Lesson
 import java.io.File
@@ -35,8 +36,23 @@ class DirectoryCoursePackageReader(
         val glossary = root.optionalJson<List<GlossaryEntry>>("glossary/glossary.json").orEmpty()
         val assets = root.optionalJson<List<CourseAsset>>("assets.json").orEmpty()
         val references = root.optionalJson<List<CourseReference>>("references.json").orEmpty()
+        // هر کارت فایل مستقل است تا Content Author بتواند Deckهای بزرگ را بدون فایل عظیم و Conflict زیاد مدیریت کند.
+        val flashcards = root.decodeDirectory<Flashcard>("flashcards")
+
+        // Named arguments جلوی شکست‌های آینده هنگام افزودن فیلدهای optional جدید به CourseBundle را می‌گیرد.
         return CourseBundle(
-            manifest, branding, levels, chapters, lessons, quizzes, exercises, projects, glossary, assets, references
+            manifest = manifest,
+            branding = branding,
+            levels = levels,
+            chapters = chapters,
+            lessons = lessons,
+            quizzes = quizzes,
+            exercises = exercises,
+            projects = projects,
+            glossary = glossary,
+            assets = assets,
+            references = references,
+            flashcards = flashcards
         )
     }
 
