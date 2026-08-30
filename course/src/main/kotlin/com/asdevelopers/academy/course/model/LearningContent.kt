@@ -29,7 +29,14 @@ enum class LessonBlockType {
     WARNING,
     NOTE,
     IMPORTANT,
+    /** نام canonical برای لینک‌کردن یک Lesson به Exercise موجود در Course Package. */
     EXERCISE,
+    /**
+     * Alias سازگار برای Course Packageهایی که در فاز توسعه اولیه از نام صریح EXERCISE_LINK استفاده کرده‌اند.
+     * محتوای جدید باید EXERCISE را ترجیح دهد، اما حذف این مقدار می‌تواند Packageهای منتشرشده را غیرقابل خواندن کند.
+     */
+    @Deprecated("Use EXERCISE; EXERCISE_LINK is kept for backwards compatibility")
+    EXERCISE_LINK,
     QUIZ,
     /** لینک رسمی به پروژه عملی؛ نام آن با Course Contract یکسان نگه داشته می‌شود. */
     PROJECT_LINK,
