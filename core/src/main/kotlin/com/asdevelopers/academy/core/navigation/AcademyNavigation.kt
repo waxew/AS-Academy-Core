@@ -15,6 +15,9 @@ object AcademyRoutes {
     const val QUIZ = "academy/quiz/{quizId}"
     const val EXERCISE = "academy/exercise/{exerciseId}"
     const val PROJECT = "academy/project/{projectId}"
+    const val PLACEMENT = "academy/placement"
+    const val WEAK_TOPIC_REVIEW = "academy/review/weak-topics"
+    const val FLASHCARD_REVIEW = "academy/review/flashcards"
 
     /** ساخت Route درس در یک مکان از خطای encode شناسه جلوگیری می‌کند. */
     fun lesson(lessonId: String): String = "academy/lesson/${encode(lessonId)}"
@@ -34,7 +37,7 @@ object AcademyRoutes {
 }
 
 /**
- * NavHost پایه صفحه‌های عمومی و فعالیت‌های یادگیری را ثبت می‌کند.
+ * NavHost پایه صفحه‌های عمومی، فعالیت‌های یادگیری و مسیرهای مرور را ثبت می‌کند.
  * Course فقط مدل محتوا را پیدا می‌کند و Composable مشترک متناظر را به Slot می‌دهد.
  */
 @Composable
@@ -47,6 +50,9 @@ fun AcademyNavHost(
     quiz: @Composable (quizId: String) -> Unit = {},
     exercise: @Composable (exerciseId: String) -> Unit = {},
     project: @Composable (projectId: String) -> Unit = {},
+    placement: @Composable () -> Unit = {},
+    weakTopicReview: @Composable () -> Unit = {},
+    flashcardReview: @Composable () -> Unit = {},
     additionalGraph: NavGraphBuilder.() -> Unit = {}
 ) {
     // تمام مقصدهای مشترک در یک Graph قرار می‌گیرند تا Back behavior بین Courseها یکسان بماند.
@@ -76,6 +82,10 @@ fun AcademyNavHost(
             val projectId = entry.arguments?.getString("projectId")
             if (projectId == null) home() else project(decode(projectId))
         }
+        // Placement و Review مقصدهای عمومی بدون شناسه URL هستند و State را از Repository مشترک می‌گیرند.
+        composable(AcademyRoutes.PLACEMENT) { placement() }
+        composable(AcademyRoutes.WEAK_TOPIC_REVIEW) { weakTopicReview() }
+        composable(AcademyRoutes.FLASHCARD_REVIEW) { flashcardReview() }
         // Course هنوز می‌تواند مقصد واقعاً اختصاصی خودش را بدون Fork کردن NavHost اضافه کند.
         additionalGraph()
     }
@@ -92,3 +102,6 @@ fun NavHostController.openLesson(lessonId: String) = navigate(AcademyRoutes.less
 fun NavHostController.openQuiz(quizId: String) = navigate(AcademyRoutes.quiz(quizId)) { launchSingleTop = true }
 fun NavHostController.openExercise(exerciseId: String) = navigate(AcademyRoutes.exercise(exerciseId)) { launchSingleTop = true }
 fun NavHostController.openProject(projectId: String) = navigate(AcademyRoutes.project(projectId)) { launchSingleTop = true }
+fun NavHostController.openPlacement() = navigate(AcademyRoutes.PLACEMENT) { launchSingleTop = true }
+fun NavHostController.openWeakTopicReview() = navigate(AcademyRoutes.WEAK_TOPIC_REVIEW) { launchSingleTop = true }
+fun NavHostController.openFlashcardReview() = navigate(AcademyRoutes.FLASHCARD_REVIEW) { launchSingleTop = true }
