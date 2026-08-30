@@ -11,7 +11,7 @@ data class SearchDocument(
     val body: String
 )
 
-/** همه اپ‌ها یک شیوه یکسان برای ساخت ایندکس درس و واژه‌نامه دارند. */
+/** همه اپ‌ها یک شیوه یکسان برای ساخت ایندکس درس، واژه‌نامه و Flashcard دارند. */
 object SearchDocumentFactory {
     fun from(bundle: CourseBundle): List<SearchDocument> {
         val lessonDocuments = bundle.lessons.map { lesson ->
@@ -32,7 +32,20 @@ object SearchDocumentFactory {
                 body = entry.definition + " " + entry.aliases.joinToString(" ")
             )
         }
-        return lessonDocuments + glossaryDocuments
+        val flashcardDocuments = bundle.flashcards.map { card ->
+            SearchDocument(
+                courseId = bundle.manifest.courseId,
+                refId = card.id,
+                refType = "flashcard",
+                title = card.front,
+                body = buildString {
+                    append(card.back)
+                    card.hint?.takeIf(String::isNotBlank)?.let { append(" ").append(it) }
+                    if (card.tags.isNotEmpty()) append(" ").append(card.tags.joinToString(" "))
+                }
+            )
+        }
+        return lessonDocuments + glossaryDocuments + flashcardDocuments
     }
 }
 
