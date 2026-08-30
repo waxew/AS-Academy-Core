@@ -18,6 +18,8 @@ object AcademyRoutes {
     const val PLACEMENT = "academy/placement"
     const val WEAK_TOPIC_REVIEW = "academy/review/weak-topics"
     const val FLASHCARD_REVIEW = "academy/review/flashcards"
+    /** Catalog عمومی همه Quiz/Exercise/Projectها را بدون Route اختصاصی Course نمایش می‌دهد. */
+    const val LEARNING_CATALOG = "academy/catalog"
 
     /** ساخت Route درس در یک مکان از خطای encode شناسه جلوگیری می‌کند. */
     fun lesson(lessonId: String): String = "academy/lesson/${encode(lessonId)}"
@@ -53,6 +55,7 @@ fun AcademyNavHost(
     placement: @Composable () -> Unit = {},
     weakTopicReview: @Composable () -> Unit = {},
     flashcardReview: @Composable () -> Unit = {},
+    learningCatalog: @Composable () -> Unit = {},
     additionalGraph: NavGraphBuilder.() -> Unit = {}
 ) {
     // تمام مقصدهای مشترک در یک Graph قرار می‌گیرند تا Back behavior بین Courseها یکسان بماند.
@@ -86,6 +89,8 @@ fun AcademyNavHost(
         composable(AcademyRoutes.PLACEMENT) { placement() }
         composable(AcademyRoutes.WEAK_TOPIC_REVIEW) { weakTopicReview() }
         composable(AcademyRoutes.FLASHCARD_REVIEW) { flashcardReview() }
+        // Catalog عمومی مدل‌ها را از Slot Host می‌گیرد اما Navigation و Back stack کاملاً مشترک است.
+        composable(AcademyRoutes.LEARNING_CATALOG) { learningCatalog() }
         // Course هنوز می‌تواند مقصد واقعاً اختصاصی خودش را بدون Fork کردن NavHost اضافه کند.
         additionalGraph()
     }
@@ -105,3 +110,4 @@ fun NavHostController.openProject(projectId: String) = navigate(AcademyRoutes.pr
 fun NavHostController.openPlacement() = navigate(AcademyRoutes.PLACEMENT) { launchSingleTop = true }
 fun NavHostController.openWeakTopicReview() = navigate(AcademyRoutes.WEAK_TOPIC_REVIEW) { launchSingleTop = true }
 fun NavHostController.openFlashcardReview() = navigate(AcademyRoutes.FLASHCARD_REVIEW) { launchSingleTop = true }
+fun NavHostController.openLearningCatalog() = navigate(AcademyRoutes.LEARNING_CATALOG) { launchSingleTop = true }
