@@ -2,6 +2,14 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.0.1 — 2026-08-30
+
+### Fixed
+
+- `androidx.room:room-runtime` به‌عنوان dependency عمومی Core منتشر می‌شود تا Course Hostهایی که `AcademyDatabase` را مصرف می‌کنند به `RoomDatabase` دسترسی کامل داشته باشند.
+- `EXERCISE_LINK` به‌عنوان alias سازگار برای Course Packageهای اولیه پذیرفته می‌شود؛ Renderer آن را مانند `EXERCISE` اجرا می‌کند و Validator برای Content جدید استفاده از نام canonical `EXERCISE` را پیشنهاد می‌دهد.
+- سازگاری Content Packageهای منتشرشده بدون شکستن Stable ID یا Progress کاربر حفظ می‌شود.
+
 ## 1.0.0 — 2026-08-29
 
 ### Added
