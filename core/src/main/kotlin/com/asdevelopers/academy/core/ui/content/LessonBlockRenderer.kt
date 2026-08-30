@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Info
@@ -85,10 +83,17 @@ fun RenderLessonBlock(
         LessonBlockType.IMPORTANT -> Callout(block.content, Icons.Outlined.Info, MaterialTheme.colorScheme.primaryContainer)
         LessonBlockType.IMAGE,
         LessonBlockType.DIAGRAM -> assetRenderer?.invoke(block) ?: AssetPlaceholder(block)
-        LessonBlockType.EXERCISE -> ActionBlock("شروع تمرین", block.content) { onExerciseClick(block.metadata["exerciseId"] ?: block.content) }
-        LessonBlockType.QUIZ -> ActionBlock("شروع آزمون", block.content) { onQuizClick(block.metadata["quizId"] ?: block.content) }
+        LessonBlockType.EXERCISE,
+        LessonBlockType.EXERCISE_LINK -> ActionBlock("شروع تمرین", block.content) {
+            onExerciseClick(block.metadata["exerciseId"] ?: block.content)
+        }
+        LessonBlockType.QUIZ -> ActionBlock("شروع آزمون", block.content) {
+            onQuizClick(block.metadata["quizId"] ?: block.content)
+        }
         LessonBlockType.PROJECT_LINK,
-        LessonBlockType.PROJECT -> ActionBlock("مشاهده پروژه", block.content) { onProjectClick(block.metadata["projectId"] ?: block.content) }
+        LessonBlockType.PROJECT -> ActionBlock("مشاهده پروژه", block.content) {
+            onProjectClick(block.metadata["projectId"] ?: block.content)
+        }
         LessonBlockType.REFERENCE -> Callout(block.content, Icons.Outlined.Info, MaterialTheme.colorScheme.surfaceVariant)
     }
 }
