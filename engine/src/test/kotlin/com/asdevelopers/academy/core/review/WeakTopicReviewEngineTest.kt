@@ -10,15 +10,7 @@ import kotlin.test.assertTrue
 class WeakTopicReviewEngineTest {
     @Test
     fun `repeated weak tags rank matching lessons first`() {
-        val base = validCourseBundle()
-        val original = base.lessons.single()
-        val bundle = base.copy(
-            lessons = listOf(
-                original.copy(id = "sample-lesson-basics", title = "Basics", order = 0, tags = setOf("basics")),
-                original.copy(id = "sample-lesson-memory", title = "Memory", order = 1, tags = setOf("memory")),
-                original.copy(id = "sample-lesson-unrelated", title = "Other", order = 2, tags = setOf("other"))
-            )
-        )
+        val bundle = reviewBundle()
         val scores = listOf(
             score(setOf("basics", "memory")),
             score(setOf("basics"))
@@ -34,12 +26,34 @@ class WeakTopicReviewEngineTest {
     }
 
     @Test
+    fun `persisted weak tag sets use the same ranking without synthetic quiz scores`() {
+        val recommendations = WeakTopicReviewEngine.recommendLessonsFromWeakTags(
+            bundle = reviewBundle(),
+            weakTagSets = listOf(setOf("basics", "memory"), setOf("basics"))
+        )
+
+        assertEquals(listOf("sample-lesson-basics", "sample-lesson-memory"), recommendations.map { it.lessonId })
+        assertEquals(listOf(2, 1), recommendations.map { it.priority })
+    }
+
+    @Test
     fun `empty weakness produces no recommendations`() {
         val recommendations = WeakTopicReviewEngine.recommendLessons(
             validCourseBundle(),
             listOf(score(emptySet()))
         )
         assertTrue(recommendations.isEmpty())
+    }
+
+    private fun reviewBundle() = validCourseBundle().let { base ->
+        val original = base.lessons.single()
+        base.copy(
+            lessons = listOf(
+                original.copy(id = "sample-lesson-basics", title = "Basics", order = 0, tags = setOf("basics")),
+                original.copy(id = "sample-lesson-memory", title = "Memory", order = 1, tags = setOf("memory")),
+                original.copy(id = "sample-lesson-unrelated", title = "Other", order = 2, tags = setOf("other"))
+            )
+        )
     }
 
     private fun score(weakTags: Set<String>) = QuizScore(

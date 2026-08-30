@@ -1,6 +1,7 @@
 package com.asdevelopers.academy.core.progress
 
 import com.asdevelopers.academy.core.content.CourseBundle
+import com.asdevelopers.academy.course.model.CourseLevelType
 
 /** پیشرفت و وضعیت بازبودن یک Level برای Dashboard مشترک. */
 data class LevelProgressState(
@@ -47,12 +48,7 @@ object LearningPathEngine {
         }
         val orderedLevels = bundle.levels.sortedBy { it.order }
         val orderedLessonsByLevel = orderedLevels.associate { level ->
-            val chapterIds = bundle.chapters.filter { it.levelId == level.id }
-                .sortedBy { it.order }
-                .map { it.id }
-            level.id to chapterIds.flatMap { chapterId ->
-                bundle.lessons.filter { it.chapterId == chapterId }.sortedBy { it.order }
-            }
+            level.id to orderedLessonsForLevel(bundle, level.id)
         }
 
         val levelStates = mutableListOf<LevelProgressState>()
@@ -93,4 +89,22 @@ object LearningPathEngine {
             levels = levelStates
         )
     }
+
+    /**
+     * Placement و Deep Linkها برای رفتن به نقطه شروع یک نوع Level از همین ترتیب رسمی فصل/درس استفاده می‌کنند.
+     * اگر چند Level از یک type وجود داشته باشد، اولین Level بر اساس order انتخاب می‌شود.
+     */
+    fun firstLessonIdForLevelType(bundle: CourseBundle, levelType: CourseLevelType): String? {
+        val level = bundle.levels
+            .filter { it.type == levelType }
+            .minByOrNull { it.order }
+            ?: return null
+        return orderedLessonsForLevel(bundle, level.id).firstOrNull()?.id
+    }
+
+    /** ترتیب درس‌های یک Level در یک helper واحد نگهداری می‌شود تا Dashboard و Placement اختلاف ترتیب نداشته باشند. */
+    private fun orderedLessonsForLevel(bundle: CourseBundle, levelId: String) = bundle.chapters
+        .filter { it.levelId == levelId }
+        .sortedBy { it.order }
+        .flatMap { chapter -> bundle.lessons.filter { it.chapterId == chapter.id }.sortedBy { it.order } }
 }

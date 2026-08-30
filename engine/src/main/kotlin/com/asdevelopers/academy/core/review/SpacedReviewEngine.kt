@@ -57,6 +57,11 @@ object SpacedReviewEngine {
     }
 
     /**
+     * Milliseconds epoch به روز UTC تبدیل می‌شود تا Courseها محاسبه زمان مرور را جداگانه و با timezone متفاوت تکرار نکنند.
+     */
+    fun utcEpochDay(epochMillis: Long): Long = Math.floorDiv(epochMillis, MILLIS_PER_DAY)
+
+    /**
      * فاصله مرور بعدی را با الگوریتمی پایدار و قابل پیش‌بینی محاسبه می‌کند.
      * AGAIN زنجیره موفقیت را reset می‌کند؛ HARD رشد کم، GOOD رشد معمول و EASY رشد سریع‌تر دارد.
      */
@@ -106,7 +111,7 @@ object SpacedReviewEngine {
         )
     }
 
-    /** فقط کارت‌هایی را برمی‌گرداند که موعد مرورشان رسیده یا گذشته است. */
+    /** فقط کارت‌هایی را برمی‌گرداند که موعد مرورشان رسیده یا گذشته است؛ کارت دیده‌نشده همان روز قابل مرور است. */
     fun dueCards(
         cards: List<Flashcard>,
         progress: Map<String, FlashcardProgress>,
@@ -114,4 +119,6 @@ object SpacedReviewEngine {
     ): List<Flashcard> = cards.filter { card ->
         progress[card.id]?.dueEpochDay?.let { it <= currentEpochDay } ?: true
     }
+
+    private const val MILLIS_PER_DAY: Long = 86_400_000L
 }

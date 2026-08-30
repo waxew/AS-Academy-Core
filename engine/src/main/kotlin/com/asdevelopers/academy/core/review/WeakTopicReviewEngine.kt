@@ -15,30 +15,49 @@ data class LessonReviewRecommendation(
 
 /**
  * موتور مشترک تشخیص موضوعات ضعیف.
- * QuizScore فقط weakTags را تولید می‌کند و این Engine آن‌ها را به درس‌های واقعی Course نگاشت می‌کند.
+ * ورودی می‌تواند QuizScore زنده یا مجموعه Tagهای ذخیره‌شده در Room/Backup باشد؛ منطق رتبه‌بندی فقط یک‌بار در Core است.
  */
 object WeakTopicReviewEngine {
 
-    /** فراوانی ضعف هر Tag را از چند نتیجه آزمون محاسبه می‌کند. */
-    fun weakTagFrequency(scores: List<QuizScore>): Map<String, Int> = scores
-        .flatMap { it.weakTags }
+    /** فراوانی ضعف هر Tag را از چند نتیجه زنده Quiz Engine محاسبه می‌کند. */
+    fun weakTagFrequency(scores: List<QuizScore>): Map<String, Int> =
+        weakTagFrequencyFromSets(scores.map(QuizScore::weakTags))
+
+    /**
+     * همان تحلیل برای تاریخچه Persist شده؛ Repository مجبور نیست QuizScore مصنوعی بسازد.
+     * هر Set نماینده Weak Tags یک Attempt مستقل است.
+     */
+    fun weakTagFrequencyFromSets(weakTagSets: List<Set<String>>): Map<String, Int> = weakTagSets
+        .flatMap { it }
+        .filter(String::isNotBlank)
         .groupingBy { it }
         .eachCount()
         .toList()
         .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
         .toMap(linkedMapOf())
 
-    /**
-     * درس‌هایی را که بیشترین هم‌پوشانی با ضعف‌های تکرارشونده دارند رتبه‌بندی می‌کند.
-     * priority مجموع فراوانی Tagهای ضعف مشترک با هر درس است.
-     */
+    /** مسیر قبلی QuizScore برای سازگاری API حفظ می‌شود. */
     fun recommendLessons(
         bundle: CourseBundle,
         scores: List<QuizScore>,
         limit: Int = 10
+    ): List<LessonReviewRecommendation> = recommendLessonsFromWeakTags(
+        bundle = bundle,
+        weakTagSets = scores.map(QuizScore::weakTags),
+        limit = limit
+    )
+
+    /**
+     * درس‌هایی را که بیشترین هم‌پوشانی با ضعف‌های تکرارشونده Persist شده دارند رتبه‌بندی می‌کند.
+     * priority مجموع فراوانی Tagهای ضعف مشترک با هر درس است.
+     */
+    fun recommendLessonsFromWeakTags(
+        bundle: CourseBundle,
+        weakTagSets: List<Set<String>>,
+        limit: Int = 10
     ): List<LessonReviewRecommendation> {
         require(limit > 0) { "limit must be positive" }
-        val frequency = weakTagFrequency(scores)
+        val frequency = weakTagFrequencyFromSets(weakTagSets)
         if (frequency.isEmpty()) return emptyList()
 
         return bundle.lessons.mapNotNull { lesson ->

@@ -3,13 +3,13 @@
     "courseId": "sample",
     "titleFa": "دوره نمونه AS Academy",
     "titleEn": "AS Academy Sample",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "contentSchemaVersion": 1,
-    "minimumCoreVersion": "1.0.0",
+    "minimumCoreVersion": "1.2.0",
     "rtl": true,
     "defaultLocale": "fa",
     "supportedLocales": ["fa"],
-    "curriculumVersion": "1.0.0",
+    "curriculumVersion": "1.2.0",
     "publisherId": "as-team",
     "capabilities": {
       "codeRunner": false,
@@ -61,42 +61,12 @@
       "tags": ["core", "architecture"],
       "prerequisites": [],
       "blocks": [
-        {
-          "id": "sample-block-title",
-          "type": "TITLE",
-          "content": "AS Academy Core",
-          "metadata": {}
-        },
-        {
-          "id": "sample-block-paragraph",
-          "type": "PARAGRAPH",
-          "content": "Navigation، Progress، Quiz، Exercise، Search، Bookmark و تنظیمات از این هسته دریافت می‌شوند.",
-          "metadata": {}
-        },
-        {
-          "id": "sample-block-list",
-          "type": "LIST",
-          "content": "Offline First\nRTL First\nبدون تکرار منطق مشترک\nحفظ داده در Migration",
-          "metadata": {}
-        },
-        {
-          "id": "sample-block-code",
-          "type": "CODE",
-          "content": "implementation(project(\":core\"))",
-          "metadata": {"language": "kotlin"}
-        },
-        {
-          "id": "sample-block-tip",
-          "type": "TIP",
-          "content": "ریپوی هر دوره فقط محتوا، Branding و Adapter اختصاصی را نگه می‌دارد.",
-          "metadata": {}
-        },
-        {
-          "id": "sample-block-quiz",
-          "type": "QUIZ",
-          "content": "آزمون کوتاه معماری",
-          "metadata": {"quizId": "sample-quiz-001"}
-        }
+        {"id": "sample-block-title", "type": "TITLE", "content": "AS Academy Core", "metadata": {}},
+        {"id": "sample-block-paragraph", "type": "PARAGRAPH", "content": "Navigation، Progress، Quiz، Exercise، Search، Bookmark و تنظیمات از این هسته دریافت می‌شوند.", "metadata": {}},
+        {"id": "sample-block-list", "type": "LIST", "content": "Offline First\nRTL First\nبدون تکرار منطق مشترک\nحفظ داده در Migration", "metadata": {}},
+        {"id": "sample-block-code", "type": "CODE", "content": "implementation(project(\":core\"))", "metadata": {"language": "kotlin"}},
+        {"id": "sample-block-tip", "type": "TIP", "content": "ریپوی هر دوره فقط محتوا، Branding و Adapter اختصاصی را نگه می‌دارد.", "metadata": {}},
+        {"id": "sample-block-quiz", "type": "QUIZ", "content": "آزمون کوتاه معماری", "metadata": {"quizId": "sample-quiz-001"}}
       ]
     }
   ],
@@ -146,13 +116,7 @@
       "estimatedMinutes": 30,
       "relatedLessonIds": ["sample-lesson-001"],
       "milestones": [
-        {
-          "id": "sample-project-step-001",
-          "title": "تکمیل Manifest",
-          "description": "شناسه و نسخه دوره را ثبت کنید.",
-          "order": 0,
-          "acceptanceCriteria": ["Validator بدون خطا اجرا شود."]
-        }
+        {"id": "sample-project-step-001", "title": "تکمیل Manifest", "description": "شناسه و نسخه دوره را ثبت کنید.", "order": 0, "acceptanceCriteria": ["Validator بدون خطا اجرا شود."]}
       ],
       "tags": ["integration"]
     }

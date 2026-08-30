@@ -17,7 +17,7 @@
 
 ## نسخه فعلی
 
-- Core/API: **1.1.0**
+- Core/API: **1.2.0**
 - Course schema: **1**
 - Room database schema: **4**
 - Backup schema: **3**
@@ -30,7 +30,7 @@
 | `engine` | Kotlin/JVM | Validator، Codec، Progress، Quiz، Exercise، Project، Search، Review، Placement، Achievement، Code Runner API، Version و Update rules |
 | `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer و Review UI |
 | `tools` | JVM CLI | اعتبارسنجی پوشه Course و ساخت `bundle.json` بدون Android SDK |
-| `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core |
+| `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core و Adaptive Review |
 
 جریان وابستگی یک‌طرفه است:
 
@@ -46,16 +46,9 @@ course <- engine <- core <- course application
 نیازمندی‌ها: JDK 17، Android SDK 36 و Gradle Wrapper موجود در Repository.
 
 ```bash
-# تست موتورهای مستقل از Android
 ./gradlew :course:test :engine:test
-
-# اعتبارسنجی Template قابل ویرایش
 ./gradlew :tools:run --args="validate course/template"
-
-# ساخت یک فایل واحد برای assets اپ Android
 ./gradlew :tools:run --args="compile course/template build/course-bundle.json"
-
-# بررسی Runtime و ساخت اپ مرجع
 ./gradlew :core:lintDebug :sample-app:assembleDebug
 ```
 
@@ -73,13 +66,13 @@ includeBuild("../AS-Academy-Core")
 
 ```kotlin
 dependencies {
-    implementation("com.asdevelopers.academy:core:1.1.0")
+    implementation("com.asdevelopers.academy:core:1.2.0")
 }
 ```
 
 جزئیات کامل در [راهنمای مصرف Core](docs/core-usage.md) و [راهنمای اتصال یک دوره](docs/integration-guide.md) آمده است.
 
-## امکانات موجود در نسخه 1.1.0
+## امکانات موجود در نسخه 1.2.0
 
 - JSON Course Contract با Stable ID، SemVer، Schema Version و Capability flags
 - Course Validator و Compiler مشترک برای CI و Runtime
@@ -101,7 +94,12 @@ dependencies {
 - `WeakTopicReviewEngine` برای تبدیل weakTags آزمون‌ها به درس‌های اولویت‌دار مرور
 - `PlacementEngine` با Policy قابل تنظیم و Policy چهارسطحی استاندارد
 - UI مشترک Flashcard Review، Weak Topic Review و Placement Summary
-- Sample Course، Unit/Regression Test و GitHub Actions
+- Repository عمومی برای Placement و Weak Review مبتنی بر Quiz history ذخیره‌شده
+- Routeهای مشترک Placement، Weak Topic Review و Flashcard Review در `AcademyNavHost`
+- انتخاب اولین درس سطح پیشنهادی از `LearningPathEngine` بدون تکرار ترتیب در Course Host
+- Flashcard Session snapshot با Batch پیش‌فرض 20 کارتی و محاسبه UTC review day در Core
+- Sample App end-to-end برای Quiz -> Room -> Placement / Weak Review / Flashcard Review
+- Unit/Regression Test و GitHub Actions
 
 محدوده دقیق بخش‌های آماده و کارهای باقی‌مانده در [وضعیت پیاده‌سازی](docs/implementation-status.md) ثبت شده است؛ این سند اجازه نمی‌دهد قابلیت نیمه‌کاره به اشتباه Production-ready اعلام شود.
 
