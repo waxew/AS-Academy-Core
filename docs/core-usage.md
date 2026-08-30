@@ -29,7 +29,7 @@ include(":app")
 
 ```kotlin
 dependencies {
-    implementation("com.asdevelopers.academy:core:1.0.0")
+    implementation("com.asdevelopers.academy:core:1.3.0")
 }
 ```
 
@@ -86,7 +86,46 @@ Flow بالا درصد کل، وضعیت بازبودن هر Level و `nextLesso
 
 ## Shell و Navigation
 
-از `AcademyTheme`، `AcademyAppShell` و `AcademyNavHost` استفاده کنید. گزینه‌های Course از `AcademyDrawerItem` تزریق می‌شوند و destinationهای خاص با `additionalGraph` اضافه می‌شوند. Settings، About و Route درس دوباره ساخته نمی‌شوند.
+از `AcademyTheme`، `AcademyAppShell` و `AcademyNavHost` استفاده کنید. گزینه‌های Course از `AcademyDrawerItem` تزریق می‌شوند و destinationهای خاص با `additionalGraph` اضافه می‌شوند. Settings، About، Activity Routeها و Back stack دوباره ساخته نمی‌شوند.
+
+### مرکز تمرین و ارزیابی — Core 1.3.0
+
+برای Courseهای دارای تعداد زیاد Quiz/Exercise/Project، Catalog محلی نسازید. Bundle را مستقیماً به Screen مشترک بدهید:
+
+```kotlin
+AcademyLearningCatalogScreen(
+    quizzes = bundle.quizzes,
+    exercises = bundle.exercises,
+    projects = bundle.projects,
+    onQuizClick = navController::openQuiz,
+    onExerciseClick = navController::openExercise,
+    onProjectClick = navController::openProject
+)
+```
+
+در `AcademyNavHost` فقط Slot عمومی را متصل کنید:
+
+```kotlin
+AcademyNavHost(
+    navController = navController,
+    home = { /* ... */ },
+    settings = { /* ... */ },
+    about = { /* ... */ },
+    lesson = { /* ... */ },
+    learningCatalog = {
+        AcademyLearningCatalogScreen(
+            quizzes = bundle.quizzes,
+            exercises = bundle.exercises,
+            projects = bundle.projects,
+            onQuizClick = navController::openQuiz,
+            onExerciseClick = navController::openExercise,
+            onProjectClick = navController::openProject
+        )
+    }
+)
+```
+
+برای Drawer/Home از `navController.openLearningCatalog()` استفاده کنید. Search، فیلتر Quiz/Exercise/Project، شمارنده‌ها و Cardهای مشترک در Core نگهداری می‌شوند؛ Course نباید این UI را Fork کند.
 
 ## قابلیت اختصاصی
 
