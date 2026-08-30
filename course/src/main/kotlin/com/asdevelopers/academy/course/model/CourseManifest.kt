@@ -51,6 +51,8 @@ data class CourseCapabilities(
     val exercises: Boolean = true,
     val projects: Boolean = true,
     val glossary: Boolean = true,
+    /** Flashcard یک قابلیت مشترک Core است؛ Course فقط کارت‌های اختصاصی خود را می‌آورد. */
+    val flashcards: Boolean = true,
     val bookmarks: Boolean = true,
     val userNotes: Boolean = true,
     val achievements: Boolean = true,
