@@ -111,3 +111,23 @@ data class AchievementEntity(
     val achievementId: String,
     val unlockedAt: Long
 )
+
+/**
+ * وضعیت Spaced Review هر Flashcard به تفکیک Course ذخیره می‌شود.
+ * dueEpochDay به‌صورت روز UTC نگهداری می‌شود تا زمان‌بندی مرور به timezone و ساعت اجرای برنامه وابسته نباشد.
+ */
+@Entity(
+    tableName = "flashcard_progress",
+    primaryKeys = ["courseId", "cardId"],
+    indices = [Index(value = ["courseId", "dueEpochDay"])]
+)
+data class FlashcardProgressEntity(
+    val courseId: String,
+    val cardId: String,
+    val repetitions: Int,
+    val intervalDays: Int,
+    val easeFactor: Double,
+    val lastReviewedEpochDay: Long?,
+    val dueEpochDay: Long,
+    val updatedAt: Long
+)
