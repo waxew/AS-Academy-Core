@@ -156,3 +156,25 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<AchievementEntity>)
 }
+
+/** Persistence مشترک Spaced Review؛ تمام Queryها با courseId ایزوله می‌شوند. */
+@Dao
+interface FlashcardProgressDao {
+    @Query("SELECT * FROM flashcard_progress WHERE courseId = :courseId ORDER BY dueEpochDay, cardId")
+    fun observeCourse(courseId: String): Flow<List<FlashcardProgressEntity>>
+
+    @Query("SELECT * FROM flashcard_progress WHERE courseId = :courseId AND dueEpochDay <= :currentEpochDay ORDER BY dueEpochDay, cardId")
+    fun observeDue(courseId: String, currentEpochDay: Long): Flow<List<FlashcardProgressEntity>>
+
+    @Query("SELECT * FROM flashcard_progress WHERE courseId = :courseId AND cardId = :cardId LIMIT 1")
+    fun observe(courseId: String, cardId: String): Flow<FlashcardProgressEntity?>
+
+    @Query("SELECT * FROM flashcard_progress")
+    suspend fun getAll(): List<FlashcardProgressEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: FlashcardProgressEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<FlashcardProgressEntity>)
+}
