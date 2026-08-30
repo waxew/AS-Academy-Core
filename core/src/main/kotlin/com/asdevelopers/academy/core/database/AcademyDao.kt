@@ -174,6 +174,10 @@ interface FlashcardReviewDao {
     @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId AND dueAt <= :nowEpochMillis ORDER BY dueAt ASC, flashcardId ASC LIMIT :limit")
     fun observeDue(courseId: String, nowEpochMillis: Long, limit: Int = 100): Flow<List<FlashcardReviewEntity>>
 
+    /** Snapshot یک Session مرور را ثابت نگه می‌دارد تا تغییر Flow بعد از Rating باعث پرش Index نشود. */
+    @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId AND dueAt <= :nowEpochMillis ORDER BY dueAt ASC, flashcardId ASC LIMIT :limit")
+    suspend fun getDue(courseId: String, nowEpochMillis: Long, limit: Int = 100): List<FlashcardReviewEntity>
+
     @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId ORDER BY dueAt ASC, flashcardId ASC")
     fun observeCourse(courseId: String): Flow<List<FlashcardReviewEntity>>
 
