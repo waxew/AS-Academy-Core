@@ -2,6 +2,26 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.1.0 — 2026-08-30
+
+### Added
+
+- `SpacedReviewEngine` برای ساخت Flashcard از Glossary، زمان‌بندی AGAIN/HARD/GOOD/EASY و انتخاب کارت‌های موعدرسیده.
+- `WeakTopicReviewEngine` برای تجمیع `QuizScore.weakTags` و رتبه‌بندی درس‌های مناسب مرور.
+- `PlacementEngine` با Policy قابل تنظیم و Policy استاندارد چهارسطحی AS Academy.
+- `FlashcardProgressEntity`، DAO و `FlashcardReviewRepository` برای Persistence چنددوره‌ای برنامه مرور.
+- Migration غیرمخرب Room `3 -> 4`؛ جدول‌های قبلی بدون بازنویسی حفظ می‌شوند.
+- Backup schema v3 برای نگهداری Flashcard Review Progress با Decode سازگار فایل‌های v1 و v2.
+- `AcademyFlashcardReviewScreen` برای Session مرور با Reveal و چهار Rating.
+- `AcademyWeakTopicReviewScreen` برای نمایش درس‌های اولویت‌دار بر اساس ضعف‌های تکرارشونده.
+- `AcademyPlacementSummaryScreen` برای نمایش نمره تعیین‌سطح، سطح شروع و اقدام مرور نقاط ضعف.
+- Unit/Regression Test برای Spaced Review، Weak Topic Review، Placement و سازگاری Backupهای قدیمی.
+
+### Changed
+
+- نسخه عمومی Core و مختصات تمام ماژول‌ها به `1.1.0` افزایش یافت.
+- Database به schema v4 و Backup به schema v3 ارتقا یافت، بدون `fallbackToDestructiveMigration`.
+
 ## 1.0.1 — 2026-08-30
 
 ### Fixed
