@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 /**
  * دیتابیس مرکزی داده‌های کاربر.
  *
- * Course Package و Search Index قابل بازسازی‌اند، اما Progress، Note، Draft و Completion در Migration حفظ می‌شوند.
+ * Course Package و Search Index قابل بازسازی‌اند، اما Progress، Note، Draft، Completion و Review Progress در Migration حفظ می‌شوند.
  */
 @Database(
     entities = [
@@ -22,9 +22,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SearchIndexEntity::class,
         ExerciseDraftEntity::class,
         ProjectProgressEntity::class,
-        AchievementEntity::class
+        AchievementEntity::class,
+        FlashcardProgressEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AcademyDatabase : RoomDatabase() {
@@ -37,6 +38,7 @@ abstract class AcademyDatabase : RoomDatabase() {
     abstract fun exerciseDraftDao(): ExerciseDraftDao
     abstract fun projectProgressDao(): ProjectProgressDao
     abstract fun achievementDao(): AchievementDao
+    abstract fun flashcardProgressDao(): FlashcardProgressDao
 
     companion object {
         /**
@@ -45,7 +47,7 @@ abstract class AcademyDatabase : RoomDatabase() {
          */
         fun create(context: Context, name: String = "as_academy.db"): AcademyDatabase =
             Room.databaseBuilder(context.applicationContext, AcademyDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
 
         /** نسخه اولیه تک‌دوره‌ای را به ساختار چنددوره‌ای و Repositoryهای کامل ارتقا می‌دهد. */
@@ -65,6 +67,16 @@ abstract class AcademyDatabase : RoomDatabase() {
                     migrateLegacyTablesToCourseAwareSchema(database)
                 }
                 ensureLearningCompletionTable(database)
+            }
+        }
+
+        /**
+         * نسخه 4 فقط جدول مستقل Flashcard Progress را اضافه می‌کند؛ هیچ جدول یا ستون قبلی بازنویسی نمی‌شود.
+         * این Migration برای Update کاربرانی که داده آموزشی نسخه 3 دارند کاملاً non-destructive است.
+         */
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                ensureFlashcardProgressTable(database)
             }
         }
 
@@ -150,6 +162,27 @@ abstract class AcademyDatabase : RoomDatabase() {
             )
             database.execSQL(
                 "CREATE INDEX IF NOT EXISTS index_learning_completion_courseId_targetId ON learning_completion (courseId, targetId)"
+            )
+        }
+
+        private fun ensureFlashcardProgressTable(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS flashcard_progress (
+                    courseId TEXT NOT NULL,
+                    cardId TEXT NOT NULL,
+                    repetitions INTEGER NOT NULL,
+                    intervalDays INTEGER NOT NULL,
+                    easeFactor REAL NOT NULL,
+                    lastReviewedEpochDay INTEGER,
+                    dueEpochDay INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL,
+                    PRIMARY KEY(courseId, cardId)
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_flashcard_progress_courseId_dueEpochDay ON flashcard_progress (courseId, dueEpochDay)"
             )
         }
 
