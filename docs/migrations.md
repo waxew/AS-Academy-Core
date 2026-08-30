@@ -2,9 +2,9 @@
 
 ## دسته‌بندی داده
 
-Course Package و Search Index قابل بازسازی‌اند. Progress، Bookmark، Note، Quiz history، Exercise draft، Project progress، Achievement، Settings و Profile داده کاربرند و نباید در Upgrade حذف شوند.
+Course Package و Search Index قابل بازسازی‌اند. Progress، Bookmark، Note، Quiz history، Exercise draft، Project progress، Achievement، Flashcard review progress، Settings و Profile داده کاربرند و نباید در Upgrade حذف شوند.
 
-## Database نسخه 3
+## Database نسخه 4
 
 Migration `MIGRATION_1_2` ساختار تک‌دوره‌ای اولیه را به کلیدهای چنددوره‌ای ارتقا می‌دهد:
 
@@ -15,6 +15,8 @@ Migration `MIGRATION_1_2` ساختار تک‌دوره‌ای اولیه را ب
 - فقط FTS cache حذف و پس از Import Course دوباره ساخته می‌شود.
 
 در دوره توسعه، دو Schema متفاوت با شماره v2 ساخته شدند: یک شاخه فقط جدول `learning_completion` را اضافه کرده بود و شاخه دیگر ساختار چنددوره‌ای کامل را داشت. `MIGRATION_2_3` شکل واقعی جدول‌ها را با `PRAGMA table_info` تشخیص می‌دهد، مسیر لازم را اجرا می‌کند و هر دو را بدون پاک‌کردن داده به Schema واحد v3 می‌رساند.
+
+`MIGRATION_3_4` فقط جدول `flashcard_progress` و index مرکب `courseId + dueEpochDay` را ایجاد می‌کند. هیچ جدول یا ستون قبلی Drop یا Rewrite نمی‌شود. وضعیت Review با کلید ترکیبی `courseId + cardId` نگهداری می‌شود تا چند Course روی یک دیتابیس تداخل نداشته باشند.
 
 رکوردهای نسخه تک‌دوره‌ای ابتدا با `courseId = ""` حفظ می‌شوند، چون Migration دیتابیس هنوز نمی‌داند کدام Course Package نصب خواهد شد. اولین `CoursePackageImporter.import(bundle)` آن‌ها را داخل همان Transaction و بر اساس Stable IDهای Bundle به Course درست متصل می‌کند:
 
@@ -42,4 +44,11 @@ Migration `MIGRATION_1_2` ساختار تک‌دوره‌ای اولیه را ب
 
 ## Backup
 
-`AcademyBackup` نسخه مستقل دارد. Schema v2 فهرست Completionهای Exercise/Project را اضافه کرده است؛ Restore جدید فایل v1 را با فهرست خالی مهاجرت می‌دهد، اما شماره فایل جدید v2 است تا نسخه قدیمی آن را نپذیرد و داده را بی‌صدا حذف نکند. Restore ابتدا کل JSON را Decode و نسخه را کنترل می‌کند و سپس همه Upsertها را در یک Transaction انجام می‌دهد. Search Index در Backup نیست، چون از Course Package بازسازی می‌شود.
+`AcademyBackup` نسخه مستقل دارد.
+
+- Schema v2 فهرست Completionهای Exercise/Project را اضافه کرد.
+- Schema v3 وضعیت Flashcard/Spaced Review را اضافه می‌کند.
+- فیلدهای جدید مقدار پیش‌فرض خالی دارند، بنابراین Core 1.1.0 فایل‌های Backup v1 و v2 را بدون از دست‌دادن داده قبلی Decode می‌کند.
+- فایل جدید با schema v3 نوشته می‌شود تا Core قدیمی آن را به اشتباه به‌عنوان قالب کامل‌تر قبول نکند.
+
+Restore ابتدا کل JSON را Decode و نسخه را کنترل می‌کند و سپس همه Upsertها، از جمله Flashcard Progress، را در یک Transaction انجام می‌دهد. Search Index در Backup نیست، چون از Course Package بازسازی می‌شود.
