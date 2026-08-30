@@ -13,11 +13,11 @@
 - Adapter واقعاً اختصاصی، مانند JavaScript Code Runner
 - تنظیمات نهایی اپ، Package Name و Signing خارج از Core
 
-کپی‌کردن Navigation، Room، Progress، Quiz، Search، Bookmark، Settings، Drawer/Profile، Lesson Renderer، Update، Backup، Placement یا Review Engine داخل Course Repository مجاز نیست.
+کپی‌کردن Navigation، Room، Progress، Quiz، Search، Bookmark، Settings، Drawer/Profile، Lesson Renderer، Update، Backup، Placement، Review Engine یا Learning Catalog داخل Course Repository مجاز نیست.
 
 ## نسخه فعلی
 
-- Core/API: **1.2.0**
+- Core/API: **1.3.0**
 - Course schema: **1**
 - Room database schema: **4**
 - Backup schema: **3**
@@ -28,9 +28,9 @@
 |---|---|---|
 | `course` | Kotlin/JVM | قرارداد Serializable برای Manifest، محتوا، Branding و منابع |
 | `engine` | Kotlin/JVM | Validator، Codec، Progress، Quiz، Exercise، Project، Search، Review، Placement، Achievement، Code Runner API، Version و Update rules |
-| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer و Review UI |
+| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer، Adaptive Review UI و Learning Catalog |
 | `tools` | JVM CLI | اعتبارسنجی پوشه Course و ساخت `bundle.json` بدون Android SDK |
-| `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core و Adaptive Review |
+| `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core و APIهای مشترک |
 
 جریان وابستگی یک‌طرفه است:
 
@@ -66,13 +66,13 @@ includeBuild("../AS-Academy-Core")
 
 ```kotlin
 dependencies {
-    implementation("com.asdevelopers.academy:core:1.2.0")
+    implementation("com.asdevelopers.academy:core:1.3.0")
 }
 ```
 
 جزئیات کامل در [راهنمای مصرف Core](docs/core-usage.md) و [راهنمای اتصال یک دوره](docs/integration-guide.md) آمده است.
 
-## امکانات موجود در نسخه 1.2.0
+## امکانات موجود در نسخه 1.3.0
 
 - JSON Course Contract با Stable ID، SemVer، Schema Version و Capability flags
 - Course Validator و Compiler مشترک برای CI و Runtime
@@ -98,8 +98,13 @@ dependencies {
 - Routeهای مشترک Placement، Weak Topic Review و Flashcard Review در `AcademyNavHost`
 - انتخاب اولین درس سطح پیشنهادی از `LearningPathEngine` بدون تکرار ترتیب در Course Host
 - Flashcard Session snapshot با Batch پیش‌فرض 20 کارتی و محاسبه UTC review day در Core
-- Sample App end-to-end برای Quiz -> Room -> Placement / Weak Review / Flashcard Review
+- `AcademyLearningCatalogScreen` برای جست‌وجو و مرور یکپارچه Quiz، Exercise و Project
+- Route عمومی `academy/catalog` و helper مشترک `openLearningCatalog()`
+- فیلتر All/Quiz/Exercise/Project، شمارنده و metadata استاندارد هر Activity در Catalog
+- Sample App compile integration برای Catalog عمومی
 - Unit/Regression Test و GitHub Actions
+
+Learning Catalog هیچ تغییر Room یا Backup Schema ایجاد نمی‌کند؛ فقط از مدل‌های موجود `CourseBundle` استفاده می‌کند و از Routeهای عمومی Quiz/Exercise/Project به مقصد واقعی می‌رود.
 
 محدوده دقیق بخش‌های آماده و کارهای باقی‌مانده در [وضعیت پیاده‌سازی](docs/implementation-status.md) ثبت شده است؛ این سند اجازه نمی‌دهد قابلیت نیمه‌کاره به اشتباه Production-ready اعلام شود.
 
