@@ -45,6 +45,15 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
         }
     }
 
+    /**
+     * UI Session باید لیست ثابت ابتدای جلسه داشته باشد؛ Rating هر کارت نباید index کارت‌های بعدی را جابه‌جا کند.
+     * این متد اولین Snapshot Flow را می‌گیرد و برای همان Session ثابت نگه می‌دارد.
+     */
+    suspend fun loadDueCards(
+        bundle: CourseBundle,
+        currentEpochDay: Long
+    ): List<Flashcard> = observeDueCards(bundle, currentEpochDay).first()
+
     /** وضعیت یک کارت برای نمایش جزئیات یا ادامه Session. */
     fun observe(courseId: String, cardId: String): Flow<FlashcardProgress?> =
         dao.observe(courseId, cardId).map { it?.toModel() }
