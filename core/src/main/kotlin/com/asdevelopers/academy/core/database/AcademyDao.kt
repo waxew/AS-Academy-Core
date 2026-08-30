@@ -156,3 +156,33 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<AchievementEntity>)
 }
+
+/**
+ * DAO مرور Flashcard فقط State کاربر را نگه می‌دارد؛ متن کارت همیشه از Course Package خوانده می‌شود.
+ * این جداسازی باعث می‌شود Update محتوای کارت بدون تکرار متن در دیتابیس و بدون حذف سابقه مرور انجام شود.
+ */
+@Dao
+interface FlashcardReviewDao {
+    @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId AND flashcardId = :flashcardId LIMIT 1")
+    fun observe(courseId: String, flashcardId: String): Flow<FlashcardReviewEntity?>
+
+    /** نسخه suspend برای محاسبه State بعدی هنگام ثبت Rating استفاده می‌شود. */
+    @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId AND flashcardId = :flashcardId LIMIT 1")
+    suspend fun get(courseId: String, flashcardId: String): FlashcardReviewEntity?
+
+    /** صف مرور امروز فقط کارت‌های موعدرسیده همان Course را به ترتیب قدیمی‌ترین موعد برمی‌گرداند. */
+    @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId AND dueAt <= :nowEpochMillis ORDER BY dueAt ASC, flashcardId ASC LIMIT :limit")
+    fun observeDue(courseId: String, nowEpochMillis: Long, limit: Int = 100): Flow<List<FlashcardReviewEntity>>
+
+    @Query("SELECT * FROM flashcard_review_state WHERE courseId = :courseId ORDER BY dueAt ASC, flashcardId ASC")
+    fun observeCourse(courseId: String): Flow<List<FlashcardReviewEntity>>
+
+    @Query("SELECT * FROM flashcard_review_state")
+    suspend fun getAll(): List<FlashcardReviewEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entity: FlashcardReviewEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(items: List<FlashcardReviewEntity>)
+}
