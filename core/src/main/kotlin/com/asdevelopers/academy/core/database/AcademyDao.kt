@@ -185,4 +185,8 @@ interface FlashcardReviewDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<FlashcardReviewEntity>)
+
+    /** کارت تازه فقط یک بار Seed می‌شود و Review History موجود هرگز overwrite نمی‌شود. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfAbsent(items: List<FlashcardReviewEntity>)
 }
