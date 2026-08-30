@@ -5,6 +5,7 @@ import com.asdevelopers.academy.core.database.AcademyDatabase
 import com.asdevelopers.academy.core.database.AchievementEntity
 import com.asdevelopers.academy.core.database.BookmarkEntity
 import com.asdevelopers.academy.core.database.ExerciseDraftEntity
+import com.asdevelopers.academy.core.database.FlashcardProgressEntity
 import com.asdevelopers.academy.core.database.LessonProgressEntity
 import com.asdevelopers.academy.core.database.LearningCompletionEntity
 import com.asdevelopers.academy.core.database.ProjectProgressEntity
@@ -48,7 +49,8 @@ class AcademyBackupManager(
             quizResults = database.quizResultDao().getAll().map(QuizResultEntity::toBackupModel),
             exerciseDrafts = database.exerciseDraftDao().getAll().map(ExerciseDraftEntity::toBackupModel),
             projectProgress = database.projectProgressDao().getAll().map(ProjectProgressEntity::toBackupModel),
-            achievements = database.achievementDao().getAll().map(AchievementEntity::toBackupModel)
+            achievements = database.achievementDao().getAll().map(AchievementEntity::toBackupModel),
+            flashcardProgress = database.flashcardProgressDao().getAll().map(FlashcardProgressEntity::toBackupModel)
         )
         // Stream در اختیار Caller است و Manager آن را نمی‌بندد تا SAF lifecycle شکسته نشود.
         output.writer(Charsets.UTF_8).apply { write(json.encodeToString(backup)); flush() }
@@ -72,8 +74,10 @@ class AcademyBackupManager(
             database.exerciseDraftDao().upsertAll(backup.exerciseDrafts.map(ExerciseDraft::toEntity))
             database.projectProgressDao().upsertAll(backup.projectProgress.map(ProjectProgress::toEntity))
             database.achievementDao().insertAll(backup.achievements.map(BackupAchievement::toEntity))
+            database.flashcardProgressDao().upsertAll(backup.flashcardProgress.map(BackupFlashcardProgress::toEntity))
             restored = backup.lessonProgress.size + backup.learningCompletions.size + backup.bookmarks.size + backup.notes.size +
-                backup.quizResults.size + backup.exerciseDrafts.size + backup.projectProgress.size + backup.achievements.size
+                backup.quizResults.size + backup.exerciseDrafts.size + backup.projectProgress.size + backup.achievements.size +
+                backup.flashcardProgress.size
         }
         RestoreResult.Success(restored)
     } catch (error: Exception) {
@@ -108,6 +112,16 @@ private fun ProjectProgressEntity.toBackupModel() = ProjectProgress(
     courseId, projectId, completedMilestoneIds.split(SEPARATOR).filter(String::isNotBlank).toSet(), draft, updatedAt, completedAt
 )
 private fun AchievementEntity.toBackupModel() = BackupAchievement(courseId, achievementId, unlockedAt)
+private fun FlashcardProgressEntity.toBackupModel() = BackupFlashcardProgress(
+    courseId = courseId,
+    cardId = cardId,
+    repetitions = repetitions,
+    intervalDays = intervalDays,
+    easeFactor = easeFactor,
+    lastReviewedEpochDay = lastReviewedEpochDay,
+    dueEpochDay = dueEpochDay,
+    updatedAtEpochMillis = updatedAt
+)
 
 private fun LessonProgress.toEntity() = LessonProgressEntity(
     courseId, lessonId, status.name, progressPercent, lastBlockIndex, studySeconds,
@@ -126,5 +140,15 @@ private fun ProjectProgress.toEntity() = ProjectProgressEntity(
     courseId, projectId, completedMilestoneIds.sorted().joinToString(SEPARATOR), draft, updatedAtEpochMillis, completedAtEpochMillis
 )
 private fun BackupAchievement.toEntity() = AchievementEntity(courseId, achievementId, unlockedAtEpochMillis)
+private fun BackupFlashcardProgress.toEntity() = FlashcardProgressEntity(
+    courseId = courseId,
+    cardId = cardId,
+    repetitions = repetitions,
+    intervalDays = intervalDays,
+    easeFactor = easeFactor,
+    lastReviewedEpochDay = lastReviewedEpochDay,
+    dueEpochDay = dueEpochDay,
+    updatedAt = updatedAtEpochMillis
+)
 
 private const val SEPARATOR = "|"
