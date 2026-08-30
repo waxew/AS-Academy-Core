@@ -29,15 +29,15 @@ class DirectoryCoursePackageReader(
         val branding = root.requiredJson<CourseBranding>("branding.json")
         val levels = root.requiredJson<List<CourseLevel>>("levels.json")
         val chapters = root.requiredJson<List<Chapter>>("chapters.json")
+        // تمام Collection directoryها object یا array را می‌پذیرند تا Fix شاخه main و Authoring ماژولار Flashcard هر دو حفظ شوند.
         val lessons = root.decodeDirectory<Lesson>("lessons")
         val quizzes = root.decodeDirectory<Quiz>("quizzes")
         val exercises = root.decodeDirectory<Exercise>("exercises")
         val projects = root.decodeDirectory<LearningProject>("projects")
-        // Glossary و Flashcard معمولاً تعداد زیادی آیتم دارند؛ هر فایل می‌تواند object یا array باشد تا Authoring ماژولار بماند.
-        val glossary = root.decodeFlexibleDirectory<GlossaryEntry>("glossary")
+        val glossary = root.decodeDirectory<GlossaryEntry>("glossary")
         val assets = root.optionalJson<List<CourseAsset>>("assets.json").orEmpty()
         val references = root.optionalJson<List<CourseReference>>("references.json").orEmpty()
-        val flashcards = root.decodeFlexibleDirectory<Flashcard>("flashcards")
+        val flashcards = root.decodeDirectory<Flashcard>("flashcards")
 
         // Named arguments جلوی شکست‌های آینده هنگام افزودن فیلدهای optional جدید به CourseBundle را می‌گیرد.
         return CourseBundle(
@@ -80,33 +80,24 @@ class DirectoryCoursePackageReader(
             ?.let { rawJson -> json.decodeFromString<T>(rawJson) }
     }
 
-    /** پوشه‌های canonical مانند lessons هر فایل را دقیقاً یک object در نظر می‌گیرند. */
+    /**
+     * هر فایل داخل پوشه می‌تواند یک آیتم مستقل یا آرایه‌ای از همان آیتم‌ها باشد.
+     * این قرارداد هم Courseهای بزرگ را برای فایل‌های تجمیعی/تفکیک‌شده آزاد می‌گذارد و هم Glossary/Flashcard را ماژولار نگه می‌دارد.
+     */
     private inline fun <reified T> File.decodeDirectory(relativePath: String): List<T> {
         val directory = resolve(relativePath)
         if (!directory.isDirectory) return emptyList()
         return directory.walkTopDown()
             .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
             .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
-            .map { json.decodeFromString<T>(it.readText(Charsets.UTF_8)) }
-            .toList()
-    }
-
-    /**
-     * برای مجموعه‌های پرتعداد، هر فایل می‌تواند یک object یا array باشد.
-     * این روش Conflictهای Git را کم می‌کند و اجازه می‌دهد هر Level/Chapter فایل مستقل داشته باشد.
-     */
-    private inline fun <reified T> File.decodeFlexibleDirectory(relativePath: String): List<T> {
-        val directory = resolve(relativePath)
-        if (!directory.isDirectory) return emptyList()
-        return directory.walkTopDown()
-            .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
-            .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
             .flatMap { file ->
-                val rawJson = file.readText(Charsets.UTF_8).trim()
+                val raw = file.readText(Charsets.UTF_8).trim()
                 when {
-                    rawJson.startsWith("[") -> json.decodeFromString<List<T>>(rawJson).asSequence()
-                    rawJson.startsWith("{") -> sequenceOf(json.decodeFromString<T>(rawJson))
-                    else -> emptySequence()
+                    raw.startsWith("[") -> json.decodeFromString<List<T>>(raw).asSequence()
+                    raw.startsWith("{") -> sequenceOf(json.decodeFromString<T>(raw))
+                    else -> throw IllegalArgumentException(
+                        "Unsupported JSON root in ${file.relativeTo(this).invariantSeparatorsPath}; expected object or array"
+                    )
                 }
             }
             .toList()
