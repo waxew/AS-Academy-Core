@@ -6,7 +6,7 @@ import com.asdevelopers.academy.core.version.CoreVersion
 import com.asdevelopers.academy.core.version.SemanticVersion
 import com.asdevelopers.academy.course.model.LessonBlockType
 
-/** نتیجه اعتبارسنجی پیش از Import یا Release با تفکیک خطا و هشدار. */
+/** نتیجه Validation قبل از نصب یا Build دوره. */
 data class ValidationResult(
     val isValid: Boolean,
     val errors: List<String>,
@@ -14,24 +14,20 @@ data class ValidationResult(
 )
 
 /**
- * Validator مرکزی Course Package؛ ابزار Release، CI و اپ Android همگی همین کلاس را مصرف می‌کنند.
+ * Validator مرکزی؛ همان Ruleها باید در CI و Runtime استفاده شوند تا Package خراب هرگز نصب نشود.
  */
 class CoursePackageValidator {
+    private val stableIdPattern = Regex("^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    private val hexColorPattern = Regex("^#[0-9A-Fa-f]{6}$")
+    private val sha256Pattern = Regex("^[0-9A-Fa-f]{64}$")
+    private val allowedSchemes = setOf("https", "http")
 
-    /** Bundle کامل را از نظر Schema، ارتباط Stable IDها و قابلیت‌های اعلام‌شده بررسی می‌کند. */
     fun validate(bundle: CourseBundle): ValidationResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
         val manifest = bundle.manifest
 
         validateManifest(bundle, errors)
-
-        // Package آموزشی قابل انتشار حداقل یک مسیر واقعی سطح/فصل/درس دارد.
-        if (bundle.levels.isEmpty()) errors += "course has no levels"
-        if (bundle.chapters.isEmpty()) errors += "course has no chapters"
-        if (bundle.lessons.isEmpty()) errors += "course has no lessons"
-
-        // شناسه‌ها در محدوده نوع خود یکتا هستند و برای Sync/Progress تغییر نمی‌کنند.
         checkIds("level", bundle.levels.map { it.id }, errors)
         checkIds("chapter", bundle.chapters.map { it.id }, errors)
         checkIds("lesson", bundle.lessons.map { it.id }, errors)
@@ -81,7 +77,13 @@ class CoursePackageValidator {
                 block.metadata["assetId"]?.takeIf { it !in assetIds }?.let {
                     errors += "block ${block.id} references missing asset $it"
                 }
-                if (block.type == LessonBlockType.PROJECT) warnings += "block ${block.id} uses legacy PROJECT; use PROJECT_LINK"
+                // Aliasهای قدیمی خوانده می‌شوند تا Update کاربران خراب نشود، ولی Content جدید باید نام canonical را تولید کند.
+                if (block.type == LessonBlockType.EXERCISE_LINK) {
+                    warnings += "block ${block.id} uses legacy EXERCISE_LINK; use EXERCISE"
+                }
+                if (block.type == LessonBlockType.PROJECT) {
+                    warnings += "block ${block.id} uses legacy PROJECT; use PROJECT_LINK"
+                }
             }
         }
         checkUniqueOrder("lesson", bundle.lessons.groupBy { it.chapterId }, { it.order }, errors)
@@ -188,68 +190,86 @@ class CoursePackageValidator {
         }
     }
 
-    private fun validateExercises(bundle: CourseBundle, lessonIds: Set<String>, errors: MutableList<String>) {
+    private fun validateExercises(
+        bundle: CourseBundle,
+        lessonIds: Set<String>,
+        errors: MutableList<String>
+    ) {
         bundle.exercises.forEach { exercise ->
             if (exercise.courseId.isNotBlank() && exercise.courseId != bundle.manifest.courseId) errors += "exercise ${exercise.id} has a different courseId"
-            if (exercise.lessonId !in lessonIds) errors += "exercise ${exercise.id} references missing lesson ${exercise.lessonId}"
-            if (exercise.title.isBlank() || exercise.description.isBlank()) errors += "exercise ${exercise.id} needs title and description"
-            if (exercise.type in codeExerciseTypes && exercise.starterCode == null) errors += "code exercise ${exercise.id} needs starterCode"
-        }
-    }
-
-    private fun validateProjects(bundle: CourseBundle, lessonIds: Set<String>, errors: MutableList<String>) {
-        val assetIds = bundle.assets.mapTo(mutableSetOf()) { it.id }
-        bundle.projects.forEach { project ->
-            if (project.courseId != bundle.manifest.courseId) errors += "project ${project.id} has a different courseId"
-            if (project.estimatedMinutes <= 0) errors += "project ${project.id} estimatedMinutes must be positive"
-            project.relatedLessonIds.filter { it !in lessonIds }.forEach { errors += "project ${project.id} references missing lesson $it" }
-            checkIds("milestone in ${project.id}", project.milestones.map { it.id }, errors)
-            val duplicateOrders = project.milestones.groupingBy { it.order }.eachCount().filterValues { it > 1 }.keys
-            duplicateOrders.forEach { errors += "project ${project.id} has duplicate milestone order $it" }
-            listOfNotNull(project.starterAssetId, project.solutionAssetId).filter { it !in assetIds }.forEach {
-                errors += "project ${project.id} references missing asset $it"
+            exercise.lessonId?.takeIf { it !in lessonIds }?.let { errors += "exercise ${exercise.id} references missing lesson $it" }
+            if (exercise.title.isBlank()) errors += "exercise ${exercise.id} has an empty title"
+            if (exercise.description.isBlank()) errors += "exercise ${exercise.id} has an empty description"
+            if (exercise.type in setOf(ExerciseType.FILL_CODE, ExerciseType.WRITE_CODE, ExerciseType.FIX_BUG) && exercise.starterCode.isBlank()) {
+                errors += "code exercise ${exercise.id} needs starterCode"
             }
         }
     }
 
-    private fun validateResources(bundle: CourseBundle, lessonIds: Set<String>, errors: MutableList<String>) {
-        bundle.assets.forEach { asset ->
-            if (asset.relativePath.startsWith('/') || ".." in asset.relativePath.split('/')) errors += "asset ${asset.id} has an unsafe relativePath"
-            asset.sha256?.takeIf { !sha256Pattern.matches(it) }?.let { errors += "asset ${asset.id} has invalid SHA-256" }
-            asset.sizeBytes?.takeIf { it < 0 }?.let { errors += "asset ${asset.id} has negative sizeBytes" }
-        }
-        bundle.glossary.forEach { entry ->
-            if (entry.courseId != bundle.manifest.courseId) errors += "glossary ${entry.id} has a different courseId"
-            if (entry.term.isBlank() || entry.definition.isBlank()) errors += "glossary ${entry.id} needs term and definition"
-            entry.relatedLessonIds.filter { it !in lessonIds }.forEach { errors += "glossary ${entry.id} references missing lesson $it" }
-        }
-        bundle.references.forEach { reference ->
-            reference.lessonId?.takeIf { it !in lessonIds }?.let { errors += "reference ${reference.id} references missing lesson $it" }
-            if (!reference.url.startsWith("https://")) errors += "reference ${reference.id} must use https"
+    private fun validateProjects(
+        bundle: CourseBundle,
+        lessonIds: Set<String>,
+        errors: MutableList<String>
+    ) {
+        bundle.projects.forEach { project ->
+            if (project.courseId.isNotBlank() && project.courseId != bundle.manifest.courseId) errors += "project ${project.id} has a different courseId"
+            if (project.title.isBlank()) errors += "project ${project.id} has an empty title"
+            if (project.description.isBlank()) errors += "project ${project.id} has an empty description"
+            if (project.estimatedMinutes <= 0) errors += "project ${project.id} estimatedMinutes must be positive"
+            project.relatedLessonIds.filter { it !in lessonIds }.forEach {
+                errors += "project ${project.id} references missing lesson $it"
+            }
+            checkIds("milestone in ${project.id}", project.milestones.map { it.id }, errors)
+            if (project.milestones.isEmpty()) errors += "project ${project.id} has no milestones"
+            if (project.milestones.any { it.title.isBlank() || it.description.isBlank() }) {
+                errors += "project ${project.id} has an incomplete milestone"
+            }
+            checkUniqueOrder("milestone", mapOf(project.id to project.milestones), { it.order }, errors)
         }
     }
 
-    private fun checkIds(label: String, ids: List<String>, errors: MutableList<String>) {
-        ids.filterNot(stableIdPattern::matches).forEach { errors += "invalid $label id: $it" }
-        ids.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.forEach { errors += "duplicate $label id: $it" }
+    private fun validateResources(
+        bundle: CourseBundle,
+        lessonIds: Set<String>,
+        errors: MutableList<String>
+    ) {
+        bundle.glossary.forEach { entry ->
+            if (entry.courseId.isNotBlank() && entry.courseId != bundle.manifest.courseId) errors += "glossary ${entry.id} has a different courseId"
+            if (entry.term.isBlank()) errors += "glossary ${entry.id} has an empty term"
+            if (entry.definition.isBlank()) errors += "glossary ${entry.id} has an empty definition"
+            entry.relatedLessonIds.filter { it !in lessonIds }.forEach {
+                errors += "glossary ${entry.id} references missing lesson $it"
+            }
+        }
+        bundle.assets.forEach { asset ->
+            if (asset.relativePath.isBlank()) errors += "asset ${asset.id} has an empty path"
+            if (asset.mimeType.isBlank()) errors += "asset ${asset.id} has an empty mime type"
+            asset.sha256?.takeIf { !sha256Pattern.matches(it) }?.let { errors += "asset ${asset.id} has invalid sha256" }
+            asset.sizeBytes?.takeIf { it < 0 }?.let { errors += "asset ${asset.id} has negative size" }
+        }
+        bundle.references.forEach { reference ->
+            if (reference.title.isBlank()) errors += "reference ${reference.id} has an empty title"
+            val scheme = runCatching { java.net.URI(reference.url).scheme?.lowercase() }.getOrNull()
+            if (scheme !in allowedSchemes) errors += "reference ${reference.id} must use http or https"
+            reference.lessonId?.takeIf { it !in lessonIds }?.let { errors += "reference ${reference.id} references missing lesson $it" }
+        }
+    }
+
+    private fun checkIds(kind: String, ids: List<String>, errors: MutableList<String>) {
+        ids.filterNot(stableIdPattern::matches).forEach { errors += "$kind id '$it' is not stable" }
+        ids.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.forEach { errors += "duplicate $kind id $it" }
     }
 
     private fun <T, K> checkUniqueOrder(
-        label: String,
+        kind: String,
         groups: Map<K, List<T>>,
-        orderOf: (T) -> Int,
+        selector: (T) -> Int,
         errors: MutableList<String>
     ) {
-        groups.forEach { (parent, values) ->
-            values.groupingBy(orderOf).eachCount().filterValues { it > 1 }.keys
-                .forEach { errors += "duplicate $label order $it under $parent" }
+        groups.forEach { (owner, values) ->
+            values.groupingBy(selector).eachCount().filterValues { it > 1 }.keys.forEach {
+                errors += "duplicate $kind order $it under $owner"
+            }
         }
-    }
-
-    companion object {
-        private val stableIdPattern = Regex("^[a-z0-9][a-z0-9-]{1,95}$")
-        private val sha256Pattern = Regex("^[A-Fa-f0-9]{64}$")
-        private val hexColorPattern = Regex("^#[A-Fa-f0-9]{6}([A-Fa-f0-9]{2})?$")
-        private val codeExerciseTypes = setOf(ExerciseType.WRITE_CODE, ExerciseType.COMPLETE_CODE, ExerciseType.FIX_CODE, ExerciseType.BUILD_FEATURE)
     }
 }
