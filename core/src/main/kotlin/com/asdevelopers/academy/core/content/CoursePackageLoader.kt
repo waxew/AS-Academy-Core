@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.withTransaction
 import com.asdevelopers.academy.core.database.AcademyDatabase
 import com.asdevelopers.academy.core.database.LegacyCourseDataClaimer
+import com.asdevelopers.academy.core.repository.FlashcardReviewRepository
 import com.asdevelopers.academy.core.repository.SearchRepository
 import com.asdevelopers.academy.core.search.SearchDocumentFactory
 import java.io.File
@@ -61,15 +62,20 @@ class CoursePackageLoader(
     }
 }
 
-/** Importer عملیات مشتق‌شده مانند Search Index را در Transaction واحد انجام می‌دهد. */
+/** Importer تمام داده‌های مشتق‌شده و State اولیه قابل‌بازسازی Course را در Transaction واحد آماده می‌کند. */
 class CoursePackageImporter(
     private val database: AcademyDatabase,
-    private val searchRepository: SearchRepository = SearchRepository(database.searchDao())
+    private val searchRepository: SearchRepository = SearchRepository(database.searchDao()),
+    private val flashcardReviewRepository: FlashcardReviewRepository = FlashcardReviewRepository(database.flashcardReviewDao())
 ) {
     suspend fun import(bundle: CourseBundle) {
-        // اتصال داده Legacy و ساخت Index با هم Commit می‌شوند تا Import نیمه‌کاره دیده نشود.
+        // اتصال داده Legacy، Seed کارت‌های تازه و ساخت Search Index با هم Commit می‌شوند تا Import نیمه‌کاره دیده نشود.
         database.withTransaction {
             LegacyCourseDataClaimer.claim(database.openHelper.writableDatabase, bundle)
+            flashcardReviewRepository.seedCourse(
+                courseId = bundle.manifest.courseId,
+                cards = bundle.flashcards
+            )
             searchRepository.replaceCourse(
                 courseId = bundle.manifest.courseId,
                 documents = SearchDocumentFactory.from(bundle)
