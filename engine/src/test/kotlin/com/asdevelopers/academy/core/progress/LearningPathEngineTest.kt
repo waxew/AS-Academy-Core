@@ -7,6 +7,7 @@ import com.asdevelopers.academy.course.model.CourseLevelType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** قفل Level و مقصد ادامه یادگیری باید در تمام Course appها یکسان بماند. */
@@ -54,6 +55,43 @@ class LearningPathEngineTest {
         val unlocked = LearningPathEngine.buildDashboard(bundle, listOf(completedFirst))
         assertTrue(unlocked.levels.last().isUnlocked)
         assertEquals(secondLesson.id, unlocked.nextLessonId)
+    }
+
+    @Test
+    fun `placement first lesson lookup follows level chapter and lesson order`() {
+        val base = validCourseBundle()
+        val advanced = CourseLevel("sample-advanced", "sample", CourseLevelType.ADVANCED, "پیشرفته", 1)
+        val laterChapter = Chapter("sample-advanced-later", advanced.id, "بعد", "فصل دوم", 2)
+        val firstChapter = Chapter("sample-advanced-first", advanced.id, "اول", "فصل اول", 1)
+        val laterLesson = base.lessons.single().copy(
+            id = "sample-lesson-later",
+            chapterId = laterChapter.id,
+            order = 0,
+            blocks = base.lessons.single().blocks.map { it.copy(id = "sample-block-later") }
+        )
+        val secondLessonInFirstChapter = base.lessons.single().copy(
+            id = "sample-lesson-first-2",
+            chapterId = firstChapter.id,
+            order = 2,
+            blocks = base.lessons.single().blocks.map { it.copy(id = "sample-block-first-2") }
+        )
+        val firstLesson = base.lessons.single().copy(
+            id = "sample-lesson-first-1",
+            chapterId = firstChapter.id,
+            order = 1,
+            blocks = base.lessons.single().blocks.map { it.copy(id = "sample-block-first-1") }
+        )
+        val bundle = base.copy(
+            levels = base.levels + advanced,
+            chapters = base.chapters + laterChapter + firstChapter,
+            lessons = base.lessons + laterLesson + secondLessonInFirstChapter + firstLesson
+        )
+
+        assertEquals(
+            "sample-lesson-first-1",
+            LearningPathEngine.firstLessonIdForLevelType(bundle, CourseLevelType.ADVANCED)
+        )
+        assertNull(LearningPathEngine.firstLessonIdForLevelType(bundle, CourseLevelType.SPECIALIST))
     }
 
     @Test
