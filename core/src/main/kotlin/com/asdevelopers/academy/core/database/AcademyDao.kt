@@ -69,6 +69,14 @@ interface QuizResultDao {
     @Query("SELECT * FROM quiz_results WHERE courseId = :courseId AND quizId = :quizId ORDER BY completedAt DESC")
     fun observeForQuiz(courseId: String, quizId: String): Flow<List<QuizResultEntity>>
 
+    /** Adaptive Review فقط تاریخچه همان Course را می‌بیند و داده دوره‌های دیگر را وارد تحلیل نمی‌کند. */
+    @Query("SELECT * FROM quiz_results WHERE courseId = :courseId ORDER BY completedAt DESC")
+    fun observeCourse(courseId: String): Flow<List<QuizResultEntity>>
+
+    /** نتیجه آخر یک Quiz برای Placement Summary و صفحه نتیجه بدون State موقت Host استفاده می‌شود. */
+    @Query("SELECT * FROM quiz_results WHERE courseId = :courseId AND quizId = :quizId ORDER BY completedAt DESC LIMIT 1")
+    fun observeLatest(courseId: String, quizId: String): Flow<QuizResultEntity?>
+
     @Query("SELECT * FROM quiz_results")
     fun observeAll(): Flow<List<QuizResultEntity>>
 
