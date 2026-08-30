@@ -13,15 +13,22 @@
 - Adapter واقعاً اختصاصی، مانند JavaScript Code Runner
 - تنظیمات نهایی اپ، Package Name و Signing خارج از Core
 
-کپی‌کردن Navigation، Room، Progress، Quiz، Search، Bookmark، Settings، Drawer/Profile، Lesson Renderer، Update یا Backup داخل Course Repository مجاز نیست.
+کپی‌کردن Navigation، Room، Progress، Quiz، Search، Bookmark، Settings، Drawer/Profile، Lesson Renderer، Update، Backup، Placement یا Review Engine داخل Course Repository مجاز نیست.
+
+## نسخه فعلی
+
+- Core/API: **1.1.0**
+- Course schema: **1**
+- Room database schema: **4**
+- Backup schema: **3**
 
 ## ماژول‌های واقعی
 
 | ماژول | نوع | مسئولیت |
 |---|---|---|
 | `course` | Kotlin/JVM | قرارداد Serializable برای Manifest، محتوا، Branding و منابع |
-| `engine` | Kotlin/JVM | Validator، Codec، Progress، Quiz، Exercise، Project، Search، Achievement، Code Runner API، Version و Update rules |
-| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer و Renderer |
+| `engine` | Kotlin/JVM | Validator، Codec، Progress، Quiz، Exercise، Project، Search، Review، Placement، Achievement، Code Runner API، Version و Update rules |
+| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer و Review UI |
 | `tools` | JVM CLI | اعتبارسنجی پوشه Course و ساخت `bundle.json` بدون Android SDK |
 | `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core |
 
@@ -66,13 +73,13 @@ includeBuild("../AS-Academy-Core")
 
 ```kotlin
 dependencies {
-    implementation("com.asdevelopers.academy:core:1.0.0")
+    implementation("com.asdevelopers.academy:core:1.1.0")
 }
 ```
 
 جزئیات کامل در [راهنمای مصرف Core](docs/core-usage.md) و [راهنمای اتصال یک دوره](docs/integration-guide.md) آمده است.
 
-## امکانات موجود در نسخه 1.0.0
+## امکانات موجود در نسخه 1.1.0
 
 - JSON Course Contract با Stable ID، SemVer، Schema Version و Capability flags
 - Course Validator و Compiler مشترک برای CI و Runtime
@@ -81,14 +88,20 @@ dependencies {
 - Exercise draft/evaluator، Project progress و Achievement rules
 - ثبت تکمیل Exercise/Project با Repository مشترک و حضور در Backup/Restore
 - Offline FTS Search، Bookmark و User Notes
-- Room Database چنددوره‌ای v3 با Migration غیرمخرب `1 -> 2 -> 3` و پشتیبانی از هر دو Schema آزمایشی v2
+- Room Database چنددوره‌ای v4 با Migration غیرمخرب `1 -> 2 -> 3 -> 4`
 - اتصال خودکار داده‌های تک‌دوره‌ای قدیمی به Course جدید هنگام Import بر اساس Stable ID
 - DataStore برای Theme، اعلان، اندازه متن و Profile
 - Navigation، App Shell، Drawer راست، Settings، About و Branding پویا
-- Backup/Restore تراکنشی و Content Update با SHA-256، نصب Atomic و Rollback
+- Backup/Restore تراکنشی schema v3 با خواندن سازگار Backupهای v1/v2
+- Content Update با SHA-256، نصب Atomic و Rollback
 - Code Runner plugin contract برای Adapterهای اختصاصی زبان
 - WorkManager study reminder با مدیریت مجوز Android 13+
-- Sample Course، Unit Test و GitHub Actions
+- `SpacedReviewEngine` و Flashcard generation از Glossary بدون duplication محتوا
+- Flashcard Review persistence با برنامه مرور محفوظ در Update و Backup/Restore
+- `WeakTopicReviewEngine` برای تبدیل weakTags آزمون‌ها به درس‌های اولویت‌دار مرور
+- `PlacementEngine` با Policy قابل تنظیم و Policy چهارسطحی استاندارد
+- UI مشترک Flashcard Review، Weak Topic Review و Placement Summary
+- Sample Course، Unit/Regression Test و GitHub Actions
 
 محدوده دقیق بخش‌های آماده و کارهای باقی‌مانده در [وضعیت پیاده‌سازی](docs/implementation-status.md) ثبت شده است؛ این سند اجازه نمی‌دهد قابلیت نیمه‌کاره به اشتباه Production-ready اعلام شود.
 
