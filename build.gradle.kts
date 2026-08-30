@@ -11,5 +11,6 @@ plugins {
 // این مختصات در Composite Build و انتشارهای آینده، وابستگی پروژه‌های Course را پایدار نگه می‌دارد.
 allprojects {
     group = "com.asdevelopers.academy"
-    version = "1.0.1"
+    // باید با CoreVersion.CURRENT هم‌نسخه باشد؛ Flashcard support انتشار backward-compatible نسخه 1.1.0 است.
+    version = "1.1.0"
 }

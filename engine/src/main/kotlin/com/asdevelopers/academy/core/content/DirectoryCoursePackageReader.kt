@@ -9,6 +9,7 @@ import com.asdevelopers.academy.course.model.CourseBranding
 import com.asdevelopers.academy.course.model.CourseLevel
 import com.asdevelopers.academy.course.model.CourseManifest
 import com.asdevelopers.academy.course.model.CourseReference
+import com.asdevelopers.academy.course.model.Flashcard
 import com.asdevelopers.academy.course.model.GlossaryEntry
 import com.asdevelopers.academy.course.model.Lesson
 import java.io.File
@@ -22,20 +23,36 @@ class DirectoryCoursePackageReader(
     private val json: Json = CoursePackageCodec.defaultJson
 ) {
     fun read(root: File): CourseBundle {
+        // نبود فایل‌های اصلی خطای واضح تولید می‌کند و Release ناقص ساخته نمی‌شود.
         require(root.isDirectory) { "Course package root is not a directory: ${root.path}" }
         val manifest = root.requiredJson<CourseManifest>("manifest.json")
         val branding = root.requiredJson<CourseBranding>("branding.json")
         val levels = root.requiredJson<List<CourseLevel>>("levels.json")
         val chapters = root.requiredJson<List<Chapter>>("chapters.json")
+        // تمام Collection directoryها object یا array را می‌پذیرند تا Fix شاخه main و Authoring ماژولار Flashcard هر دو حفظ شوند.
         val lessons = root.decodeDirectory<Lesson>("lessons")
         val quizzes = root.decodeDirectory<Quiz>("quizzes")
         val exercises = root.decodeDirectory<Exercise>("exercises")
         val projects = root.decodeDirectory<LearningProject>("projects")
-        val glossary = root.optionalJson<List<GlossaryEntry>>("glossary/glossary.json").orEmpty()
+        val glossary = root.decodeDirectory<GlossaryEntry>("glossary")
         val assets = root.optionalJson<List<CourseAsset>>("assets.json").orEmpty()
         val references = root.optionalJson<List<CourseReference>>("references.json").orEmpty()
+        val flashcards = root.decodeDirectory<Flashcard>("flashcards")
+
+        // Named arguments جلوی شکست‌های آینده هنگام افزودن فیلدهای optional جدید به CourseBundle را می‌گیرد.
         return CourseBundle(
-            manifest, branding, levels, chapters, lessons, quizzes, exercises, projects, glossary, assets, references
+            manifest = manifest,
+            branding = branding,
+            levels = levels,
+            chapters = chapters,
+            lessons = lessons,
+            quizzes = quizzes,
+            exercises = exercises,
+            projects = projects,
+            glossary = glossary,
+            assets = assets,
+            references = references,
+            flashcards = flashcards
         )
     }
 
@@ -65,7 +82,7 @@ class DirectoryCoursePackageReader(
 
     /**
      * هر فایل داخل پوشه می‌تواند یک آیتم مستقل یا آرایه‌ای از همان آیتم‌ها باشد.
-     * این کار Courseهای بزرگ را برای نگهداری فایل‌های تجمیعی یا تفکیک‌شده آزاد می‌گذارد.
+     * این قرارداد هم Courseهای بزرگ را برای فایل‌های تجمیعی/تفکیک‌شده آزاد می‌گذارد و هم Glossary/Flashcard را ماژولار نگه می‌دارد.
      */
     private inline fun <reified T> File.decodeDirectory(relativePath: String): List<T> {
         val directory = resolve(relativePath)

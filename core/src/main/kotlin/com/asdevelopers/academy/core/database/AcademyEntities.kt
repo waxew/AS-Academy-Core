@@ -111,3 +111,24 @@ data class AchievementEntity(
     val achievementId: String,
     val unlockedAt: Long
 )
+
+/**
+ * وضعیت مرور فاصله‌دار هر Flashcard بخشی از سابقه غیرقابل‌بازسازی کاربر است.
+ *
+ * Stable ID کارت همراه Course ID کلید اصلی است؛ بنابراین Update محتوای Course زمان‌بندی مرور را از بین نمی‌برد.
+ * Index ترکیبی Course/dueAt برای ساخت سریع صف «مرور امروز» استفاده می‌شود.
+ */
+@Entity(
+    tableName = "flashcard_review_state",
+    primaryKeys = ["courseId", "flashcardId"],
+    indices = [Index(value = ["courseId", "dueAt"])]
+)
+data class FlashcardReviewEntity(
+    val courseId: String,
+    val flashcardId: String,
+    val repetitions: Int,
+    val intervalDays: Int,
+    val easeFactor: Double,
+    val dueAt: Long,
+    val lastReviewedAt: Long?
+)

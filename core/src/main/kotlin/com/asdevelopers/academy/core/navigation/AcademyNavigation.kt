@@ -11,6 +11,8 @@ object AcademyRoutes {
     const val HOME = "academy/home"
     const val SETTINGS = "academy/settings"
     const val ABOUT = "academy/about"
+    /** صفحه مرور Flashcard مقصد عمومی Course است و خود Deck داده را از Host دریافت می‌کند. */
+    const val FLASHCARDS = "academy/flashcards"
     const val LESSON = "academy/lesson/{lessonId}"
     const val QUIZ = "academy/quiz/{quizId}"
     const val EXERCISE = "academy/exercise/{exerciseId}"
@@ -47,6 +49,8 @@ fun AcademyNavHost(
     quiz: @Composable (quizId: String) -> Unit = {},
     exercise: @Composable (exerciseId: String) -> Unit = {},
     project: @Composable (projectId: String) -> Unit = {},
+    /** Slot عمومی Flashcard مقدار پیش‌فرض دارد تا Hostهای قدیمی بدون تغییر Source-compatible بمانند. */
+    flashcards: @Composable () -> Unit = {},
     additionalGraph: NavGraphBuilder.() -> Unit = {}
 ) {
     // تمام مقصدهای مشترک در یک Graph قرار می‌گیرند تا Back behavior بین Courseها یکسان بماند.
@@ -56,6 +60,8 @@ fun AcademyNavHost(
         // Settings و About UI مشترک دارند اما داده/Branding از Host می‌آید.
         composable(AcademyRoutes.SETTINGS) { settings() }
         composable(AcademyRoutes.ABOUT) { about() }
+        // Flashcard یک مقصد ثابت Course است و Stable ID کارت داخل Deck/Repository مدیریت می‌شود.
+        composable(AcademyRoutes.FLASHCARDS) { flashcards() }
         // Stable ID درس decode و سپس به Host داده می‌شود.
         composable(AcademyRoutes.LESSON) { entry ->
             val lessonId = entry.arguments?.getString("lessonId")
@@ -88,6 +94,7 @@ private fun decode(value: String): String =
 /** Navigation به صفحات عمومی جایگزین ساخت Route دستی در Drawer و Lesson می‌شود. */
 fun NavHostController.openSettings() = navigate(AcademyRoutes.SETTINGS) { launchSingleTop = true }
 fun NavHostController.openAbout() = navigate(AcademyRoutes.ABOUT) { launchSingleTop = true }
+fun NavHostController.openFlashcards() = navigate(AcademyRoutes.FLASHCARDS) { launchSingleTop = true }
 fun NavHostController.openLesson(lessonId: String) = navigate(AcademyRoutes.lesson(lessonId)) { launchSingleTop = true }
 fun NavHostController.openQuiz(quizId: String) = navigate(AcademyRoutes.quiz(quizId)) { launchSingleTop = true }
 fun NavHostController.openExercise(exerciseId: String) = navigate(AcademyRoutes.exercise(exerciseId)) { launchSingleTop = true }

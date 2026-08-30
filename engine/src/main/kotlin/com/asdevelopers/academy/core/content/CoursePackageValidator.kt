@@ -37,6 +37,7 @@ class CoursePackageValidator {
         checkIds("glossary", bundle.glossary.map { it.id }, errors)
         checkIds("asset", bundle.assets.map { it.id }, errors)
         checkIds("reference", bundle.references.map { it.id }, errors)
+        checkIds("flashcard", bundle.flashcards.map { it.id }, errors)
 
         val levelIds = bundle.levels.map { it.id }.toSet()
         val chapterIds = bundle.chapters.map { it.id }.toSet()
@@ -92,12 +93,14 @@ class CoursePackageValidator {
         validateExercises(bundle, lessonIds, errors)
         validateProjects(bundle, lessonIds, errors)
         validateResources(bundle, lessonIds, errors)
+        validateFlashcards(bundle, lessonIds, errors)
 
         // Capability روشن ولی محتوای خالی معمولاً اشتباه Package است، اما انتشار آزمایشی را مسدود نمی‌کند.
         if (manifest.capabilities.quizzes && bundle.quizzes.isEmpty()) warnings += "quizzes capability is enabled but no quiz exists"
         if (manifest.capabilities.exercises && bundle.exercises.isEmpty()) warnings += "exercises capability is enabled but no exercise exists"
         if (manifest.capabilities.projects && bundle.projects.isEmpty()) warnings += "projects capability is enabled but no project exists"
         if (manifest.capabilities.glossary && bundle.glossary.isEmpty()) warnings += "glossary capability is enabled but glossary is empty"
+        if (manifest.capabilities.flashcards && bundle.flashcards.isEmpty()) warnings += "flashcards capability is enabled but no flashcard exists"
 
         return ValidationResult(errors.isEmpty(), errors.distinct(), warnings.distinct())
     }
@@ -252,6 +255,20 @@ class CoursePackageValidator {
             val scheme = runCatching { java.net.URI(reference.url).scheme?.lowercase() }.getOrNull()
             if (scheme !in allowedSchemes) errors += "reference ${reference.id} must use http or https"
             reference.lessonId?.takeIf { it !in lessonIds }?.let { errors += "reference ${reference.id} references missing lesson $it" }
+        }
+    }
+
+    /** Flashcard باید قابل جست‌وجو، قابل پیمایش و به درس واقعی همان Course متصل باشد. */
+    private fun validateFlashcards(
+        bundle: CourseBundle,
+        lessonIds: Set<String>,
+        errors: MutableList<String>
+    ) {
+        bundle.flashcards.forEach { flashcard ->
+            if (flashcard.courseId != bundle.manifest.courseId) errors += "flashcard ${flashcard.id} has a different courseId"
+            if (flashcard.lessonId !in lessonIds) errors += "flashcard ${flashcard.id} references missing lesson ${flashcard.lessonId}"
+            if (flashcard.front.isBlank()) errors += "flashcard ${flashcard.id} has an empty front"
+            if (flashcard.back.isBlank()) errors += "flashcard ${flashcard.id} has an empty back"
         }
     }
 
