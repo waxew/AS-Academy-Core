@@ -1,6 +1,7 @@
 package com.asdevelopers.academy.core.backup
 
 import com.asdevelopers.academy.core.exercise.ExerciseDraft
+import com.asdevelopers.academy.core.flashcard.FlashcardReviewState
 import com.asdevelopers.academy.core.progress.LessonProgress
 import com.asdevelopers.academy.core.progress.LearningCompletion
 import com.asdevelopers.academy.core.project.ProjectProgress
@@ -61,13 +62,15 @@ data class AcademyBackup(
     val quizResults: List<BackupQuizResult> = emptyList(),
     val exerciseDrafts: List<ExerciseDraft> = emptyList(),
     val projectProgress: List<ProjectProgress> = emptyList(),
-    val achievements: List<BackupAchievement> = emptyList()
+    val achievements: List<BackupAchievement> = emptyList(),
+    /** Additive و دارای default است؛ Backupهای قدیمی بدون این فیلد همچنان بدون Migration اجباری Decode می‌شوند. */
+    val flashcardReviewStates: List<FlashcardReviewState> = emptyList()
 ) {
     companion object {
-        /** با تغییر ناسازگار قالب Backup این شماره همراه Migration افزایش می‌یابد. */
+        /** فقط با تغییر ناسازگار قالب Backup این شماره افزایش می‌یابد؛ افزودن فیلد optional ناسازگار نیست. */
         const val CURRENT_SCHEMA_VERSION: Int = 2
 
-        /** نسخه 1 با مقدار پیش‌فرض خالی برای learningCompletions همچنان قابل بازیابی است. */
+        /** نسخه 1 با مقدارهای پیش‌فرض خالی برای فیلدهای جدید همچنان قابل بازیابی است. */
         const val MIN_SUPPORTED_SCHEMA_VERSION: Int = 1
     }
 }
