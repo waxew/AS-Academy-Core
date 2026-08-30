@@ -25,7 +25,7 @@ class FlashcardReviewRepository(
     fun observeCourse(courseId: String): Flow<List<FlashcardReviewState>> =
         dao.observeCourse(courseId).map { items -> items.map(FlashcardReviewEntity::toModel) }
 
-    /** صف کارت‌های موعدرسیده برای Dashboard و صفحه مرور روزانه. */
+    /** صف reactive کارت‌های موعدرسیده برای Badge و Dashboard. */
     fun observeDue(
         courseId: String,
         nowEpochMillis: Long,
@@ -35,6 +35,18 @@ class FlashcardReviewRepository(
         require(nowEpochMillis >= 0L) { "nowEpochMillis cannot be negative" }
         return dao.observeDue(courseId, nowEpochMillis, limit.coerceIn(1, 500))
             .map { items -> items.map(FlashcardReviewEntity::toModel) }
+    }
+
+    /** Snapshot ثابت برای یک Session مرور؛ Ratingهای همان Session ترتیب کارت‌های باقیمانده را جابه‌جا نمی‌کنند. */
+    suspend fun getDue(
+        courseId: String,
+        nowEpochMillis: Long,
+        limit: Int = 100
+    ): List<FlashcardReviewState> {
+        require(courseId.isNotBlank()) { "courseId is required" }
+        require(nowEpochMillis >= 0L) { "nowEpochMillis cannot be negative" }
+        return dao.getDue(courseId, nowEpochMillis, limit.coerceIn(1, 500))
+            .map(FlashcardReviewEntity::toModel)
     }
 
     /**
