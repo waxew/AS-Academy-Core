@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>AS Academy — Live Web Viewer</title>
+  <style>
+    *{box-sizing:border-box}:root{--bg:#f3f6fb;--panel:#fff;--text:#172033;--muted:#6f7b8d;--line:#e3e8f0;--brand:#04aa6d;--brand2:#087a52;--top:#111827;--soft:#ecf8f3;--code:#0d1522;--shadow:0 15px 45px rgba(17,24,39,.08)}html[data-theme=dark]{--bg:#0b111b;--panel:#121a27;--text:#eef2f7;--muted:#9aa7b8;--line:#263246;--top:#070c13;--soft:#123126;--code:#05090f;--shadow:0 20px 55px rgba(0,0,0,.3)}body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,"Segoe UI",Arial,sans-serif;line-height:1.85}.top{height:72px;background:var(--top);color:white;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 clamp(14px,4vw,52px);position:sticky;top:0;z-index:30}.brand{display:flex;align-items:center;gap:11px}.logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#22ce82,#05744d);display:grid;place-items:center;font-weight:900}.brand strong{display:block}.brand small{display:block;color:#9da8b8;font-size:11px}.toptools{display:flex;gap:8px;align-items:center}.top input,.top select{background:#192433;color:white;border:1px solid #2a374a;border-radius:11px;padding:10px 12px;outline:none}.top input{width:min(360px,28vw)}.top select{max-width:230px}.icon{width:42px;height:42px;border:1px solid #2a374a;border-radius:11px;background:#192433;color:white;cursor:pointer}.layout{display:grid;grid-template-columns:310px minmax(0,1fr);min-height:calc(100vh - 72px)}aside{background:var(--panel);border-left:1px solid var(--line);padding:24px 20px;position:sticky;top:72px;height:calc(100vh - 72px);overflow:auto}.eyebrow{color:var(--brand);font-weight:800;font-size:12px;margin:0 0 4px}.course-title{font-size:21px;line-height:1.5;margin:0}.muted{color:var(--muted)}.meta{font-size:12px;margin:6px 0 18px}.progressbox{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:15px 0}.progresstext{display:flex;justify-content:space-between;font-size:12px}.bar{height:8px;background:var(--line);border-radius:999px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand2),#31d68f);transition:.2s}.levels{display:flex;flex-wrap:wrap;gap:6px;padding:14px 0}.levels button,.chapters button,.filters button,.secondary,.lessoncard,.action,.back{font:inherit}.levels button{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:5px 9px;cursor:pointer}.levels button.active{background:var(--soft);color:var(--brand2);border-color:#b8e5d2}.chapters{display:flex;flex-direction:column;gap:4px}.chapters button{border:0;background:transparent;color:var(--text);padding:9px 11px;text-align:right;border-radius:9px;cursor:pointer}.chapters button:hover,.chapters button.active{background:var(--soft);color:var(--brand2)}main{width:min(1080px,100%);margin:0 auto;padding:clamp(18px,4vw,44px)}.hero{background:linear-gradient(135deg,var(--panel),var(--soft));border:1px solid var(--line);border-radius:24px;padding:clamp(22px,4vw,38px);display:flex;justify-content:space-between;align-items:center;gap:25px;box-shadow:var(--shadow)}.hero h1{font-size:clamp(26px,4vw,42px);line-height:1.35;margin:2px 0 10px}.hero p{max-width:720px;margin:0}.count{flex:0 0 108px;height:108px;background:var(--top);color:white;border-radius:28px;display:grid;place-items:center;align-content:center}.count b{font-size:32px;line-height:1}.count span{font-size:11px;color:#aeb9c9;margin-top:8px}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:22px 0 13px}.filters{display:flex;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:5px}.filters button,.secondary{border:0;background:transparent;color:var(--muted);padding:8px 11px;border-radius:9px;cursor:pointer}.filters button.active{background:var(--soft);color:var(--brand2);font-weight:700}.secondary{background:var(--panel);border:1px solid var(--line)}.list{display:grid;gap:9px}.lessoncard{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:15px;padding:16px 17px;text-align:right;cursor:pointer;width:100%}.lessoncard:hover{border-color:#a9ddc8;box-shadow:0 8px 25px rgba(17,24,39,.06)}.lessoncard strong{display:block}.lessonmeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}.status{color:var(--brand2)}article{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:clamp(20px,4vw,40px);box-shadow:var(--shadow)}article h1{font-size:clamp(25px,4vw,38px);line-height:1.45}article h2,article h3{line-height:1.55;margin-top:28px}pre{direction:ltr;text-align:left;background:var(--code);color:#e9eef6;border-radius:14px;padding:17px;overflow:auto;line-height:1.6}code{font-family:Consolas,"Courier New",monospace}.note{background:var(--soft);border-right:4px solid var(--brand);padding:13px 15px;border-radius:12px;margin:14px 0}.warning{background:#fff5d8;border-color:#e1a20b;color:#604600}.exercise{background:#f3edff;border-color:#7956d8;color:#3d286c}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:17px 0}.action,.back{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:8px 12px;cursor:pointer}.action.active,.action.primary{background:var(--brand);border-color:var(--brand);color:white}.empty,.loading{background:var(--panel);border:1px dashed var(--line);border-radius:18px;text-align:center;padding:40px 20px}.loader{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto 12px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.error{color:#a53030}.repoform{display:none}@media(max-width:900px){.layout{display:block}aside{position:static;height:auto;border-left:0;border-bottom:1px solid var(--line)}.chapters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.top input{width:36vw}.hero{align-items:flex-start}.count{display:none}}@media(max-width:640px){.top{height:auto;min-height:72px;flex-wrap:wrap;padding:11px 13px}.brand{width:100%;justify-content:space-between}.toptools{width:100%}.top input{width:100%;flex:1}.top select{max-width:40vw}.layout{min-height:0}.chapters{grid-template-columns:1fr}main{padding:14px}.toolbar{align-items:stretch;flex-direction:column}.filters{overflow:auto}.filters button{white-space:nowrap}.lessoncard{grid-template-columns:1fr}.hero,article{border-radius:17px}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">AS</span><span><strong>AS Academy</strong><small>Universal Web Viewer</small></span></div>
+    <div class="toptools">
+      <select id="repoSelect" aria-label="انتخاب پروژه">
+        <option value="AS-Academy-Kotlin">Kotlin</option>
+        <option value="AS-Academy-JavaScript">JavaScript</option>
+        <option value="AS-Academy-Python">Python</option>
+        <option value="AS-Academy-Java">Java</option>
+        <option value="AS-Academy-C">C</option>
+        <option value="AS-Academy-Cplusplus">C++</option>
+        <option value="AS-Academy-Csharp">C#</option>
+        <option value="AS-Academy-php">PHP</option>
+        <option value="-AS-Academy-LocalDB">Local DB</option>
+        <option value="AS-Academy-Basic">Basic</option>
+        <option value="AS-Academy-HTML">HTML</option>
+        <option value="AS-Academy-CSS">CSS</option>
+        <option value="AS-Academy-Core">Core</option>
+      </select>
+      <input id="search" type="search" placeholder="جستجو در درس‌ها…" aria-label="جستجو">
+      <button id="theme" class="icon" title="تغییر تم">◐</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <p class="eyebrow">AS Academy Course</p>
+      <h2 id="sideTitle" class="course-title">در حال بارگذاری…</h2>
+      <p id="sideMeta" class="meta muted"></p>
+      <div class="progressbox">
+        <div class="progresstext"><span>پیشرفت مطالعه</span><b id="pct">۰٪</b></div>
+        <div class="bar"><i id="bar"></i></div>
+        <small id="stats" class="muted"></small>
+      </div>
+      <div id="levels" class="levels"></div>
+      <nav id="chapters" class="chapters"></nav>
+    </aside>
+
+    <main>
+      <section id="loading" class="loading"><div class="loader"></div><b>در حال خواندن Course Package از GitHub…</b></section>
+      <section id="welcome" class="hero" hidden>
+        <div><p class="eyebrow">نسخه وب زنده</p><h1 id="heroTitle"></h1><p>این صفحه مستقیماً از محتوای فعلی ریپوی دوره ساخته می‌شود؛ بنابراین برای بررسی ظاهر و محتوای آموزشی نیازی به APK یا گوشی اندرویدی نیست.</p></div>
+        <div class="count"><b id="lessonCount">۰</b><span>درس</span></div>
+      </section>
+      <div id="toolbar" class="toolbar" hidden>
+        <div class="filters"><button data-mode="all" class="active">همه</button><button data-mode="done">مطالعه‌شده</button><button data-mode="fav">علاقه‌مندی</button></div>
+        <button id="resetFilter" class="secondary">همه فصل‌ها</button>
+      </div>
+      <section id="list" class="list"></section>
+      <article id="lesson" hidden></article>
+      <section id="empty" class="empty" hidden><h3>Course Package قابل نمایش پیدا نشد</h3><p id="emptyText" class="muted"></p></section>
+    </main>
+  </div>
+
+  <script>
+    const OWNER='waxew',BRANCH='main';
+    const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+    const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fa=n=>Number(n||0).toLocaleString('fa-IR');
+    let repo='',base='',course={},chapters=[],lessons=[],mode='all',chapterFilter=null,levelFilter=null,done=new Set(),fav=new Set();
+    const raw=path=>`https://raw.githubusercontent.com/${OWNER}/${repo}/${BRANCH}/${path}`;
+    const apiTree=()=>`https://api.github.com/repos/${OWNER}/${repo}/git/trees/${BRANCH}?recursive=1`;
+    const key=s=>`as-academy.live.${repo}.${s}`;
+    async function getJson(url,fallback=null){try{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return await r.json()}catch(e){return fallback}}
+    function loadState(){done=new Set(JSON.parse(localStorage.getItem(key('done'))||'[]'));fav=new Set(JSON.parse(localStorage.getItem(key('fav'))||'[]'))}
+    function saveState(){localStorage.setItem(key('done'),JSON.stringify([...done]));localStorage.setItem(key('fav'),JSON.stringify([...fav]));stats()}
+    function findBase(paths){if(paths.includes('course/course.json'))return 'course';const candidates=paths.filter(p=>/\/course\.json$/.test(p)&&(/assets\/course\//.test(p)||/academy-course\//.test(p)));if(candidates.length)return candidates[0].replace(/\/course\.json$/,'');return null}
+    function findChaptersPath(paths){const direct=`${base}/chapters.json`;if(paths.includes(direct))return direct;return paths.find(p=>p.startsWith(base+'/')&&/chapters\.json$/.test(p))||null}
+    function lessonPaths(paths){const preferred=paths.filter(p=>p.startsWith(base+'/lessons/')&&p.endsWith('.json'));if(preferred.length)return preferred;return paths.filter(p=>p.startsWith(base+'/')&&/\/lessons\/.*\.json$/.test(p))}
+    async function loadRepo(nextRepo){repo=(nextRepo||'AS-Academy-Kotlin').replace(/[^A-Za-z0-9_.-]/g,'');history.replaceState(null,'',`?repo=${encodeURIComponent(repo)}`);$('#repoSelect').value=repo;$('#loading').hidden=false;$('#welcome').hidden=true;$('#toolbar').hidden=true;$('#empty').hidden=true;$('#lesson').hidden=true;$('#list').innerHTML='';$('#chapters').innerHTML='';$('#levels').innerHTML='';$('#sideTitle').textContent='در حال بارگذاری…';chapterFilter=levelFilter=null;mode='all';const tree=await getJson(apiTree(),null);if(!tree||!Array.isArray(tree.tree)){return fail('امکان خواندن ساختار ریپو از GitHub وجود ندارد. ممکن است ریپو خالی باشد یا محدودیت موقت API رخ داده باشد.')}const paths=tree.tree.filter(x=>x.type==='blob').map(x=>x.path);base=findBase(paths);if(!base){return fail('زیرساخت نسخه وب برای این ریپو فعال است، اما هنوز فایل استاندارد course.json در Course Package آن قرار نگرفته است.')}course=await getJson(raw(`${base}/course.json`),{});const cp=findChaptersPath(paths);const ch=cp?await getJson(raw(cp),[]):[];chapters=Array.isArray(ch)?ch:(ch?.chapters||[]);const lp=lessonPaths(paths);const batches=[];for(let i=0;i<lp.length;i+=18)batches.push(lp.slice(i,i+18));lessons=[];for(const batch of batches){const rows=await Promise.all(batch.map(p=>getJson(raw(p),null)));lessons.push(...rows.filter(Boolean))}lessons.sort((a,b)=>(a.order||0)-(b.order||0));loadState();renderShell();$('#loading').hidden=true;$('#welcome').hidden=false;$('#toolbar').hidden=false;renderList()}
+    function fail(text){$('#loading').hidden=true;$('#empty').hidden=false;$('#emptyText').textContent=text;$('#sideTitle').textContent=repo;$('#sideMeta').textContent='Web infrastructure ready';lessons=[];chapters=[];stats()}
+    function titleOf(x){return x?.titleFa||x?.title||x?.nameFa||x?.name||x?.id||''}
+    function renderShell(){const title=titleOf(course)||repo.replace(/-/g,' ');$('#sideTitle').textContent=title;$('#heroTitle').textContent=title;$('#lessonCount').textContent=fa(lessons.length);$('#sideMeta').textContent=[course.programmingLanguage,course.referenceVersion&&`مرجع ${course.referenceVersion}`].filter(Boolean).join(' • ');document.title=`${title} — AS Academy Web`;renderLevels();renderChapters();stats()}
+    function renderLevels(){const levels=Array.isArray(course.levels)?course.levels:[];const host=$('#levels');if(!levels.length){host.hidden=true;return}host.hidden=false;host.innerHTML='<button data-level="" class="active">همه سطح‌ها</button>'+levels.map(l=>`<button data-level="${esc(l.id)}">${esc(titleOf(l))}</button>`).join('');host.onclick=e=>{const b=e.target.closest('[data-level]');if(!b)return;levelFilter=b.dataset.level||null;chapterFilter=null;$$('#levels button').forEach(x=>x.classList.toggle('active',x===b));renderChapters();renderList()}}
+    function visibleChapters(){return levelFilter?chapters.filter(c=>c.levelId===levelFilter):chapters}
+    function renderChapters(){const host=$('#chapters');host.innerHTML=visibleChapters().map(c=>`<button data-chapter="${esc(c.id)}">${esc(titleOf(c))}</button>`).join('');host.onclick=e=>{const b=e.target.closest('[data-chapter]');if(!b)return;chapterFilter=b.dataset.chapter;$$('#chapters button').forEach(x=>x.classList.toggle('active',x===b));renderList()}}
+    function stats(){const p=lessons.length?Math.round(done.size/lessons.length*100):0;$('#pct').textContent=fa(p)+'٪';$('#bar').style.width=p+'%';$('#stats').textContent=`${fa(done.size)} از ${fa(lessons.length)} درس مطالعه شده`}
+    function setMode(m){mode=m;$$('.filters button').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));renderList()}
+    function renderList(){$('#lesson').hidden=true;$('#welcome').hidden=false;const q=$('#search').value.trim().toLowerCase();const list=lessons.filter(l=>{const c=chapters.find(x=>x.id===l.chapterId);return(!levelFilter||c?.levelId===levelFilter)&&(!chapterFilter||l.chapterId===chapterFilter)&&(!q||JSON.stringify(l).toLowerCase().includes(q))&&(mode==='all'||mode==='done'&&done.has(l.id)||mode==='fav'&&fav.has(l.id))});$('#list').innerHTML=list.map(l=>{const c=chapters.find(x=>x.id===l.chapterId),mins=l.durationMin||l.estimatedMinutes;return `<button class="lessoncard" data-id="${esc(l.id)}"><span><strong>${esc(titleOf(l))}</strong><span class="lessonmeta"><span>${esc(titleOf(c))}</span>${mins?`<span>${fa(mins)} دقیقه</span>`:''}</span></span><span class="status">${done.has(l.id)?'✓ ':''}${fav.has(l.id)?'★':''}</span></button>`}).join('')||'<div class="empty"><h3>درسی پیدا نشد</h3><p class="muted">عبارت جستجو یا فیلتر را تغییر بده.</p></div>';$('#list').onclick=e=>{const b=e.target.closest('[data-id]');if(b)openLesson(b.dataset.id)};stats()}
+    function blockText(b){return b?.textFa??b?.text??b?.contentFa??b?.content??b?.titleFa??b?.title??''}
+    function blockHtml(b){const t=String(b?.type||'').toUpperCase(),x=blockText(b);if(t==='CODE')return `<pre><code>${esc(b.code??x)}</code></pre>`;if(t==='OUTPUT')return `<pre><code>${esc(x)}</code></pre>`;if(t==='TITLE')return `<h2>${esc(x)}</h2>`;if(t==='SUBTITLE')return `<h3>${esc(x)}</h3>`;if(t==='LIST'&&Array.isArray(b.items))return '<ul>'+b.items.map(i=>`<li>${esc(typeof i==='string'?i:(i.textFa||i.text||i.title||''))}</li>`).join('')+'</ul>';if(['TIP','NOTE','IMPORTANT'].includes(t))return `<div class="note"><b>${esc(t)}</b><div>${esc(x)}</div></div>`;if(t==='WARNING')return `<div class="note warning"><b>هشدار</b><div>${esc(x)}</div></div>`;if(t==='EXERCISE')return `<div class="note exercise"><b>تمرین</b><div>${esc(x)}</div></div>`;return x?`<p>${esc(x)}</p>`:''}
+    function openLesson(id){const l=lessons.find(x=>x.id===id);if(!l)return;$('#welcome').hidden=true;$('#list').innerHTML='';const a=$('#lesson');a.hidden=false;a.innerHTML=`<button class="back" id="back">← فهرست درس‌ها</button><h1>${esc(titleOf(l))}</h1>${Array.isArray(l.objectives)&&l.objectives.length?`<div class="note"><b>هدف‌های یادگیری</b><ul>${l.objectives.map(o=>`<li>${esc(o)}</li>`).join('')}</ul></div>`:''}<div class="actions"><button class="action ${done.has(id)?'active':''}" id="done">✓ مطالعه‌شده</button><button class="action ${fav.has(id)?'active':''}" id="fav">★ علاقه‌مندی</button></div>${(l.blocks||[]).map(blockHtml).join('')}<div class="actions"><button class="action" id="prev">درس قبلی</button><button class="action primary" id="next">درس بعدی</button></div>`;$('#back').onclick=renderList;$('#done').onclick=()=>{done.has(id)?done.delete(id):done.add(id);saveState();openLesson(id)};$('#fav').onclick=()=>{fav.has(id)?fav.delete(id):fav.add(id);saveState();openLesson(id)};const i=lessons.findIndex(x=>x.id===id);$('#prev').onclick=()=>lessons[i-1]&&openLesson(lessons[i-1].id);$('#next').onclick=()=>lessons[i+1]&&openLesson(lessons[i+1].id);window.scrollTo({top:0,behavior:'smooth'})}
+    $$('.filters button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+    $('#resetFilter').onclick=()=>{chapterFilter=levelFilter=null;$$('#levels button').forEach((b,i)=>b.classList.toggle('active',i===0));renderChapters();renderList()};
+    $('#search').addEventListener('input',renderList);
+    $('#repoSelect').onchange=e=>loadRepo(e.target.value);
+    const storedTheme=localStorage.getItem('as-academy.live.theme');if(storedTheme)document.documentElement.dataset.theme=storedTheme;
+    $('#theme').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('as-academy.live.theme',t)};
+    const requested=new URLSearchParams(location.search).get('repo')||'AS-Academy-Kotlin';loadRepo(requested);
+  </script>
+</body>
+</html>
