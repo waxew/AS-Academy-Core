@@ -2,6 +2,26 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.2.0 — 2026-08-30
+
+### Added
+
+- `QuizResultDao.observeCourse` و `observeLatest` برای تحلیل Course-scoped و بازیابی نتیجه آخر آزمون.
+- `WeakTopicReviewRepository` برای تبدیل Quiz history ذخیره‌شده به پیشنهاد درس بدون SQL یا parsing در Course Host.
+- `PlacementResultRepository` برای ساخت Placement Summary از آخرین Attempt Persist شده و حفظ نتیجه در Restart/Rotation.
+- مسیرهای عمومی Navigation برای Placement، Weak Topic Review و Flashcard Review به همراه helperهای `openPlacement`، `openWeakTopicReview` و `openFlashcardReview`.
+- `LearningPathEngine.firstLessonIdForLevelType` برای انتخاب نقطه شروع سطح با همان ترتیب رسمی Level/Chapter/Lesson.
+- `FlashcardReviewRepository.loadDueCards` برای Session snapshot پایدار و Batch پیش‌فرض 20 کارتی.
+- `SpacedReviewEngine.utcEpochDay` برای محاسبه یکسان روز مرور در تمام Courseها.
+- Sample App end-to-end برای Quiz -> Room -> Placement، Weak Review و Flashcard Review.
+- Regression Test برای persisted weak tags، UTC day boundaries و first-lesson placement lookup.
+
+### Changed
+
+- `WeakTopicReviewEngine` مستقیماً مجموعه Weak Tagهای Persist شده را نیز تحلیل می‌کند و API قبلی QuizScore را حفظ می‌کند.
+- Session فلش‌کارت unseen cardها را نیز due می‌داند و تعداد کارت‌های هر Session را محدود می‌کند.
+- Sample Course حداقل Core نسخه 1.2.0 را الزام می‌کند.
+
 ## 1.1.0 — 2026-08-30
 
 ### Added
