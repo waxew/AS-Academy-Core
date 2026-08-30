@@ -27,12 +27,14 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
 
     /**
      * Session واقعی را از Glossary + Progress می‌سازد؛ کارت‌های هرگز دیده‌نشده نیز due محسوب می‌شوند.
-     * Host لازم نیست Glossary را به Progress join کند یا منطق due بودن را تکرار کند.
+     * limit از Sessionهای بسیار طولانی جلوگیری می‌کند و برای همه Courseها یک پیش‌فرض UX ثابت می‌سازد.
      */
     fun observeDueCards(
         bundle: CourseBundle,
-        currentEpochDay: Long
+        currentEpochDay: Long,
+        limit: Int = DEFAULT_SESSION_SIZE
     ): Flow<List<Flashcard>> {
+        require(limit > 0) { "review session limit must be positive" }
         val courseId = bundle.manifest.courseId
         require(courseId.isNotBlank()) { "courseId is required for review session" }
         val cards = SpacedReviewEngine.fromGlossary(bundle.glossary)
@@ -41,7 +43,7 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
             val progress = entities
                 .map(FlashcardProgressEntity::toModel)
                 .associateBy(FlashcardProgress::cardId)
-            SpacedReviewEngine.dueCards(cards, progress, currentEpochDay)
+            SpacedReviewEngine.dueCards(cards, progress, currentEpochDay).take(limit)
         }
     }
 
@@ -51,8 +53,9 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
      */
     suspend fun loadDueCards(
         bundle: CourseBundle,
-        currentEpochDay: Long
-    ): List<Flashcard> = observeDueCards(bundle, currentEpochDay).first()
+        currentEpochDay: Long,
+        limit: Int = DEFAULT_SESSION_SIZE
+    ): List<Flashcard> = observeDueCards(bundle, currentEpochDay, limit).first()
 
     /** وضعیت یک کارت برای نمایش جزئیات یا ادامه Session. */
     fun observe(courseId: String, cardId: String): Flow<FlashcardProgress?> =
@@ -87,6 +90,11 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
     suspend fun save(courseId: String, progress: FlashcardProgress, updatedAtEpochMillis: Long) {
         require(courseId.isNotBlank()) { "courseId is required for review progress" }
         dao.upsert(progress.toEntity(courseId, updatedAtEpochMillis))
+    }
+
+    companion object {
+        /** پیش‌فرض 20 کارت، Session اولیه را کوتاه نگه می‌دارد و Course در صورت نیاز می‌تواند مقدار دیگری بدهد. */
+        const val DEFAULT_SESSION_SIZE: Int = 20
     }
 }
 
