@@ -1,7 +1,9 @@
 package com.asdevelopers.academy.core.repository
 
+import com.asdevelopers.academy.core.content.CourseBundle
 import com.asdevelopers.academy.core.database.FlashcardProgressDao
 import com.asdevelopers.academy.core.database.FlashcardProgressEntity
+import com.asdevelopers.academy.core.review.Flashcard
 import com.asdevelopers.academy.core.review.FlashcardProgress
 import com.asdevelopers.academy.core.review.ReviewRating
 import com.asdevelopers.academy.core.review.SpacedReviewEngine
@@ -11,7 +13,7 @@ import kotlinx.coroutines.flow.map
 
 /**
  * Repository مشترک Review، Engine مستقل از Android را به Persistence Room متصل می‌کند.
- * Courseها فقط courseId و cardId را می‌دهند و نباید الگوریتم زمان‌بندی یا Entity دیتابیس را تکرار کنند.
+ * Courseها فقط Course Bundle و Rating کاربر را می‌دهند و نباید الگوریتم زمان‌بندی یا Entity دیتابیس را تکرار کنند.
  */
 class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
 
@@ -19,9 +21,29 @@ class FlashcardReviewRepository(private val dao: FlashcardProgressDao) {
     fun observeCourse(courseId: String): Flow<List<FlashcardProgress>> =
         dao.observeCourse(courseId).map { items -> items.map(FlashcardProgressEntity::toModel) }
 
-    /** فقط کارت‌هایی که موعدشان رسیده برای ساخت Review Session برگردانده می‌شوند. */
+    /** فقط Progressهایی که موعدشان رسیده برای آمار low-level برگردانده می‌شوند. */
     fun observeDue(courseId: String, currentEpochDay: Long): Flow<List<FlashcardProgress>> =
         dao.observeDue(courseId, currentEpochDay).map { items -> items.map(FlashcardProgressEntity::toModel) }
+
+    /**
+     * Session واقعی را از Glossary + Progress می‌سازد؛ کارت‌های هرگز دیده‌نشده نیز due محسوب می‌شوند.
+     * Host لازم نیست Glossary را به Progress join کند یا منطق due بودن را تکرار کند.
+     */
+    fun observeDueCards(
+        bundle: CourseBundle,
+        currentEpochDay: Long
+    ): Flow<List<Flashcard>> {
+        val courseId = bundle.manifest.courseId
+        require(courseId.isNotBlank()) { "courseId is required for review session" }
+        val cards = SpacedReviewEngine.fromGlossary(bundle.glossary)
+
+        return dao.observeCourse(courseId).map { entities ->
+            val progress = entities
+                .map(FlashcardProgressEntity::toModel)
+                .associateBy(FlashcardProgress::cardId)
+            SpacedReviewEngine.dueCards(cards, progress, currentEpochDay)
+        }
+    }
 
     /** وضعیت یک کارت برای نمایش جزئیات یا ادامه Session. */
     fun observe(courseId: String, cardId: String): Flow<FlashcardProgress?> =
