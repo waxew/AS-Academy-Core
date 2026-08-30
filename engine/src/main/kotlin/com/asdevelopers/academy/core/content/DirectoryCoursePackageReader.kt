@@ -33,11 +33,11 @@ class DirectoryCoursePackageReader(
         val quizzes = root.decodeDirectory<Quiz>("quizzes")
         val exercises = root.decodeDirectory<Exercise>("exercises")
         val projects = root.decodeDirectory<LearningProject>("projects")
-        val glossary = root.optionalJson<List<GlossaryEntry>>("glossary/glossary.json").orEmpty()
+        // Glossary و Flashcard معمولاً تعداد زیادی آیتم دارند؛ هر فایل می‌تواند object یا array باشد تا Authoring ماژولار بماند.
+        val glossary = root.decodeFlexibleDirectory<GlossaryEntry>("glossary")
         val assets = root.optionalJson<List<CourseAsset>>("assets.json").orEmpty()
         val references = root.optionalJson<List<CourseReference>>("references.json").orEmpty()
-        // هر کارت فایل مستقل است تا Content Author بتواند Deckهای بزرگ را بدون فایل عظیم و Conflict زیاد مدیریت کند.
-        val flashcards = root.decodeDirectory<Flashcard>("flashcards")
+        val flashcards = root.decodeFlexibleDirectory<Flashcard>("flashcards")
 
         // Named arguments جلوی شکست‌های آینده هنگام افزودن فیلدهای optional جدید به CourseBundle را می‌گیرد.
         return CourseBundle(
@@ -80,6 +80,7 @@ class DirectoryCoursePackageReader(
             ?.let { rawJson -> json.decodeFromString<T>(rawJson) }
     }
 
+    /** پوشه‌های canonical مانند lessons هر فایل را دقیقاً یک object در نظر می‌گیرند. */
     private inline fun <reified T> File.decodeDirectory(relativePath: String): List<T> {
         val directory = resolve(relativePath)
         if (!directory.isDirectory) return emptyList()
@@ -87,6 +88,27 @@ class DirectoryCoursePackageReader(
             .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
             .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
             .map { json.decodeFromString<T>(it.readText(Charsets.UTF_8)) }
+            .toList()
+    }
+
+    /**
+     * برای مجموعه‌های پرتعداد، هر فایل می‌تواند یک object یا array باشد.
+     * این روش Conflictهای Git را کم می‌کند و اجازه می‌دهد هر Level/Chapter فایل مستقل داشته باشد.
+     */
+    private inline fun <reified T> File.decodeFlexibleDirectory(relativePath: String): List<T> {
+        val directory = resolve(relativePath)
+        if (!directory.isDirectory) return emptyList()
+        return directory.walkTopDown()
+            .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
+            .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
+            .flatMap { file ->
+                val rawJson = file.readText(Charsets.UTF_8).trim()
+                when {
+                    rawJson.startsWith("[") -> json.decodeFromString<List<T>>(rawJson).asSequence()
+                    rawJson.startsWith("{") -> sequenceOf(json.decodeFromString<T>(rawJson))
+                    else -> emptySequence()
+                }
+            }
             .toList()
     }
 }
