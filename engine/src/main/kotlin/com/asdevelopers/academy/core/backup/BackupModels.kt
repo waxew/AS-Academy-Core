@@ -49,6 +49,22 @@ data class BackupAchievement(
     val unlockedAtEpochMillis: Long
 )
 
+/**
+ * وضعیت مرور Flashcard مستقل از Room نگهداری می‌شود تا Backup بین نسخه‌ها و دستگاه‌ها پایدار بماند.
+ * courseId برای جلوگیری از برخورد Stable ID کارت‌ها بین Courseهای مختلف الزامی است.
+ */
+@Serializable
+data class BackupFlashcardProgress(
+    val courseId: String,
+    val cardId: String,
+    val repetitions: Int,
+    val intervalDays: Int,
+    val easeFactor: Double,
+    val lastReviewedEpochDay: Long? = null,
+    val dueEpochDay: Long,
+    val updatedAtEpochMillis: Long
+)
+
 /** قالب نسخه‌دار Backup؛ Search Index عمداً ذخیره نمی‌شود چون از Course قابل بازسازی است. */
 @Serializable
 data class AcademyBackup(
@@ -61,13 +77,15 @@ data class AcademyBackup(
     val quizResults: List<BackupQuizResult> = emptyList(),
     val exerciseDrafts: List<ExerciseDraft> = emptyList(),
     val projectProgress: List<ProjectProgress> = emptyList(),
-    val achievements: List<BackupAchievement> = emptyList()
+    val achievements: List<BackupAchievement> = emptyList(),
+    /** نسخه‌های Backup قدیمی این فیلد را ندارند و با مقدار خالی بدون از دست رفتن داده قبلی Decode می‌شوند. */
+    val flashcardProgress: List<BackupFlashcardProgress> = emptyList()
 ) {
     companion object {
-        /** با تغییر ناسازگار قالب Backup این شماره همراه Migration افزایش می‌یابد. */
-        const val CURRENT_SCHEMA_VERSION: Int = 2
+        /** نسخه 3 وضعیت Spaced Review را اضافه می‌کند؛ فیلد جدید optional/default است و backward-compatible می‌ماند. */
+        const val CURRENT_SCHEMA_VERSION: Int = 3
 
-        /** نسخه 1 با مقدار پیش‌فرض خالی برای learningCompletions همچنان قابل بازیابی است. */
+        /** نسخه 1 با مقادیر پیش‌فرض فیلدهای جدید همچنان قابل بازیابی است. */
         const val MIN_SUPPORTED_SCHEMA_VERSION: Int = 1
     }
 }
