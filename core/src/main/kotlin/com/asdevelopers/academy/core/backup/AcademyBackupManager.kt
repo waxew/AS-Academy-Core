@@ -5,12 +5,14 @@ import com.asdevelopers.academy.core.database.AcademyDatabase
 import com.asdevelopers.academy.core.database.AchievementEntity
 import com.asdevelopers.academy.core.database.BookmarkEntity
 import com.asdevelopers.academy.core.database.ExerciseDraftEntity
+import com.asdevelopers.academy.core.database.FlashcardReviewEntity
 import com.asdevelopers.academy.core.database.LessonProgressEntity
 import com.asdevelopers.academy.core.database.LearningCompletionEntity
 import com.asdevelopers.academy.core.database.ProjectProgressEntity
 import com.asdevelopers.academy.core.database.QuizResultEntity
 import com.asdevelopers.academy.core.database.UserNoteEntity
 import com.asdevelopers.academy.core.exercise.ExerciseDraft
+import com.asdevelopers.academy.core.flashcard.FlashcardReviewState
 import com.asdevelopers.academy.core.progress.LessonProgress
 import com.asdevelopers.academy.core.progress.LessonStatus
 import com.asdevelopers.academy.core.progress.LearningCompletion
@@ -48,7 +50,8 @@ class AcademyBackupManager(
             quizResults = database.quizResultDao().getAll().map(QuizResultEntity::toBackupModel),
             exerciseDrafts = database.exerciseDraftDao().getAll().map(ExerciseDraftEntity::toBackupModel),
             projectProgress = database.projectProgressDao().getAll().map(ProjectProgressEntity::toBackupModel),
-            achievements = database.achievementDao().getAll().map(AchievementEntity::toBackupModel)
+            achievements = database.achievementDao().getAll().map(AchievementEntity::toBackupModel),
+            flashcardReviewStates = database.flashcardReviewDao().getAll().map(FlashcardReviewEntity::toBackupModel)
         )
         // Stream در اختیار Caller است و Manager آن را نمی‌بندد تا SAF lifecycle شکسته نشود.
         output.writer(Charsets.UTF_8).apply { write(json.encodeToString(backup)); flush() }
@@ -72,8 +75,10 @@ class AcademyBackupManager(
             database.exerciseDraftDao().upsertAll(backup.exerciseDrafts.map(ExerciseDraft::toEntity))
             database.projectProgressDao().upsertAll(backup.projectProgress.map(ProjectProgress::toEntity))
             database.achievementDao().insertAll(backup.achievements.map(BackupAchievement::toEntity))
+            database.flashcardReviewDao().upsertAll(backup.flashcardReviewStates.map(FlashcardReviewState::toEntity))
             restored = backup.lessonProgress.size + backup.learningCompletions.size + backup.bookmarks.size + backup.notes.size +
-                backup.quizResults.size + backup.exerciseDrafts.size + backup.projectProgress.size + backup.achievements.size
+                backup.quizResults.size + backup.exerciseDrafts.size + backup.projectProgress.size + backup.achievements.size +
+                backup.flashcardReviewStates.size
         }
         RestoreResult.Success(restored)
     } catch (error: Exception) {
@@ -108,6 +113,15 @@ private fun ProjectProgressEntity.toBackupModel() = ProjectProgress(
     courseId, projectId, completedMilestoneIds.split(SEPARATOR).filter(String::isNotBlank).toSet(), draft, updatedAt, completedAt
 )
 private fun AchievementEntity.toBackupModel() = BackupAchievement(courseId, achievementId, unlockedAt)
+private fun FlashcardReviewEntity.toBackupModel() = FlashcardReviewState(
+    courseId = courseId,
+    flashcardId = flashcardId,
+    repetitions = repetitions,
+    intervalDays = intervalDays,
+    easeFactor = easeFactor,
+    dueAtEpochMillis = dueAt,
+    lastReviewedAtEpochMillis = lastReviewedAt
+)
 
 private fun LessonProgress.toEntity() = LessonProgressEntity(
     courseId, lessonId, status.name, progressPercent, lastBlockIndex, studySeconds,
@@ -126,5 +140,14 @@ private fun ProjectProgress.toEntity() = ProjectProgressEntity(
     courseId, projectId, completedMilestoneIds.sorted().joinToString(SEPARATOR), draft, updatedAtEpochMillis, completedAtEpochMillis
 )
 private fun BackupAchievement.toEntity() = AchievementEntity(courseId, achievementId, unlockedAtEpochMillis)
+private fun FlashcardReviewState.toEntity() = FlashcardReviewEntity(
+    courseId = courseId,
+    flashcardId = flashcardId,
+    repetitions = repetitions,
+    intervalDays = intervalDays,
+    easeFactor = easeFactor,
+    dueAt = dueAtEpochMillis,
+    lastReviewedAt = lastReviewedAtEpochMillis
+)
 
 private const val SEPARATOR = "|"
