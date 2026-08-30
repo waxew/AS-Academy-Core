@@ -200,7 +200,7 @@ class CoursePackageValidator {
             exercise.lessonId?.takeIf { it !in lessonIds }?.let { errors += "exercise ${exercise.id} references missing lesson $it" }
             if (exercise.title.isBlank()) errors += "exercise ${exercise.id} has an empty title"
             if (exercise.description.isBlank()) errors += "exercise ${exercise.id} has an empty description"
-            if (exercise.type in setOf(ExerciseType.COMPLETE_CODE, ExerciseType.WRITE_CODE, ExerciseType.FIX_CODE) && exercise.starterCode.isBlank()) {
+            if (exercise.type in setOf(ExerciseType.COMPLETE_CODE, ExerciseType.WRITE_CODE, ExerciseType.FIX_CODE) && exercise.starterCode.isNullOrBlank()) {
                 errors += "code exercise ${exercise.id} needs starterCode"
             }
         }
