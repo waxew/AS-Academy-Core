@@ -22,7 +22,6 @@ class DirectoryCoursePackageReader(
     private val json: Json = CoursePackageCodec.defaultJson
 ) {
     fun read(root: File): CourseBundle {
-        // نبود فایل‌های اصلی خطای واضح تولید می‌کند و Release ناقص ساخته نمی‌شود.
         require(root.isDirectory) { "Course package root is not a directory: ${root.path}" }
         val manifest = root.requiredJson<CourseManifest>("manifest.json")
         val branding = root.requiredJson<CourseBranding>("branding.json")
@@ -64,13 +63,26 @@ class DirectoryCoursePackageReader(
             ?.let { rawJson -> json.decodeFromString<T>(rawJson) }
     }
 
+    /**
+     * هر فایل داخل پوشه می‌تواند یک آیتم مستقل یا آرایه‌ای از همان آیتم‌ها باشد.
+     * این کار Courseهای بزرگ را برای نگهداری فایل‌های تجمیعی یا تفکیک‌شده آزاد می‌گذارد.
+     */
     private inline fun <reified T> File.decodeDirectory(relativePath: String): List<T> {
         val directory = resolve(relativePath)
         if (!directory.isDirectory) return emptyList()
         return directory.walkTopDown()
             .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
             .sortedBy { it.relativeTo(directory).invariantSeparatorsPath }
-            .map { json.decodeFromString<T>(it.readText(Charsets.UTF_8)) }
+            .flatMap { file ->
+                val raw = file.readText(Charsets.UTF_8).trim()
+                when {
+                    raw.startsWith("[") -> json.decodeFromString<List<T>>(raw).asSequence()
+                    raw.startsWith("{") -> sequenceOf(json.decodeFromString<T>(raw))
+                    else -> throw IllegalArgumentException(
+                        "Unsupported JSON root in ${file.relativeTo(this).invariantSeparatorsPath}; expected object or array"
+                    )
+                }
+            }
             .toList()
     }
 }
