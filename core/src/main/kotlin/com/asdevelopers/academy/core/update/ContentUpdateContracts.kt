@@ -53,6 +53,27 @@ class CourseContentUpdater(
             return ContentUpdateCheckResult.Failed("Provider returned a release for ${release.courseId}, expected $courseId")
         }
 
+        // SemVer و minimumCoreVersion از Metadata قبل از دانلود فایل بزرگ بررسی می‌شوند.
+        // Installer همین تصمیم را پس از Decode Manifest واقعی دوباره اجرا می‌کند؛ بنابراین این مرحله فقط preflight است.
+        val preflight = try {
+            installer.plan(
+                currentVersion = currentVersion,
+                candidateVersion = release.version,
+                minimumCoreVersion = release.minimumCoreVersion
+            )
+        } catch (error: Exception) {
+            return ContentUpdateCheckResult.Failed(
+                error.message ?: "Unable to evaluate content release metadata",
+                error
+            )
+        }
+        if (preflight != UpdateDecision.INSTALL) {
+            return ContentUpdateCheckResult.Completed(
+                release = release,
+                install = ContentInstallResult.Rejected("Update decision: $preflight")
+            )
+        }
+
         return try {
             val destination = withContext(Dispatchers.IO) {
                 if (!downloadDirectory.exists() && !downloadDirectory.mkdirs()) {

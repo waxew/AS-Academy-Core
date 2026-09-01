@@ -20,6 +20,21 @@ class FileCourseUpdateManager(
     private val coreVersion: String,
     private val loader: CoursePackageLoader = CoursePackageLoader()
 ) {
+    /**
+     * تصمیم Metadata-level قبل از دانلود Package.
+     * همان Planner در مرحله نصب نیز دوباره روی Manifest واقعی Package اجرا می‌شود تا Metadata قابل اعتماد فرض نشود.
+     */
+    fun plan(
+        currentVersion: String?,
+        candidateVersion: String,
+        minimumCoreVersion: String
+    ): UpdateDecision = CourseUpdatePlanner.decide(
+        currentVersion = currentVersion,
+        candidateVersion = candidateVersion,
+        minimumCoreVersion = minimumCoreVersion,
+        coreVersion = coreVersion
+    )
+
     suspend fun install(
         candidateBytes: ByteArray,
         expectedSha256: String,
@@ -52,11 +67,11 @@ class FileCourseUpdateManager(
                             "Course ID mismatch: expected $expectedCourseId, received ${load.bundle.manifest.courseId}"
                         )
                     }
-                    val decision = CourseUpdatePlanner.decide(
+                    // Metadata preflight فقط بهینه‌سازی است؛ تصمیم روی Manifest واقعی Package دوباره بررسی می‌شود.
+                    val decision = plan(
                         currentVersion = currentVersion,
                         candidateVersion = load.bundle.manifest.version,
-                        minimumCoreVersion = load.bundle.manifest.minimumCoreVersion,
-                        coreVersion = coreVersion
+                        minimumCoreVersion = load.bundle.manifest.minimumCoreVersion
                     )
                     if (decision != UpdateDecision.INSTALL) {
                         return ContentInstallResult.Rejected("Update decision: $decision")
