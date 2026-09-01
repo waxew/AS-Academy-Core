@@ -15,14 +15,24 @@ fun interface CoursePackageSource {
     suspend fun readText(): String
 }
 
-/** Asset داخلی نسخه اولیه Offline دوره را بدون نیاز به اینترنت فراهم می‌کند. */
+/**
+ * Asset داخلی نسخه اولیه Offline دوره را فراهم می‌کند.
+ * اگر Runtime Updater یک فایل معتبر را برای همین assetPath فعال کرده باشد، همان فایل نصب‌شده خوانده
+ * می‌شود؛ در غیر این صورت مسیر همیشه به Asset داخل APK برمی‌گردد.
+ */
 class AssetCoursePackageSource(
     private val context: Context,
     private val assetPath: String
 ) : CoursePackageSource {
     override suspend fun readText(): String = withContext(Dispatchers.IO) {
-        // Asset بزرگ روی Main thread خوانده نمی‌شود تا اولین Frame اپ مسدود نشود.
-        context.assets.open(assetPath).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        // Override فقط بعد از Validate توسط CourseContentStore فعال می‌شود و باعث کپی Loader در Host نمی‌شود.
+        val installedOverride = CoursePackageSourceOverrides.resolve(assetPath)
+        if (installedOverride != null) {
+            installedOverride.readText(Charsets.UTF_8)
+        } else {
+            // Asset بزرگ روی Main thread خوانده نمی‌شود تا اولین Frame اپ مسدود نشود.
+            context.assets.open(assetPath).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }
     }
 }
 

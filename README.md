@@ -8,16 +8,18 @@
 
 اگر یک قابلیت در بیش از یک دوره کاربرد دارد، باید اینجا پیاده‌سازی شود. Repository هر دوره فقط این موارد را نگه می‌دارد:
 
-- Course Package و Assetهای همان دوره
 - Branding و تنظیم Capabilityها
 - Adapter واقعاً اختصاصی، مانند JavaScript Code Runner
 - تنظیمات نهایی اپ، Package Name و Signing خارج از Core
+- آدرس کانال محتوای همان Course
+
+محتوای اصلی دوره‌ها در `AS-Academy-MainCourse` نگهداری می‌شود و Course App نباید نسخه مستقل و قابل ویرایش از محتوای اصلی را Fork کند.
 
 کپی‌کردن Navigation، Room، Progress، Quiz، Search، Bookmark، Settings، Drawer/Profile، Lesson Renderer، Update، Backup، Placement، Review Engine یا Learning Catalog داخل Course Repository مجاز نیست.
 
 ## نسخه فعلی
 
-- Core/API: **1.3.0**
+- Core/API: **1.4.0**
 - Course schema: **1**
 - Room database schema: **4**
 - Backup schema: **3**
@@ -28,7 +30,7 @@
 |---|---|---|
 | `course` | Kotlin/JVM | قرارداد Serializable برای Manifest، محتوا، Branding و منابع |
 | `engine` | Kotlin/JVM | Validator، Codec، Progress، Quiz، Exercise، Project، Search، Review، Placement، Achievement، Code Runner API، Version و Update rules |
-| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer، Adaptive Review UI و Learning Catalog |
+| `core` | Android Library | Room، Repository، DataStore، WorkManager، Navigation Compose، Theme، Drawer، Renderer، Adaptive Review UI، Learning Catalog و Runtime Content Update |
 | `tools` | JVM CLI | اعتبارسنجی پوشه Course و ساخت `bundle.json` بدون Android SDK |
 | `sample-app` | Android App | نمونه اجرایی اتصال Course Package به Core و APIهای مشترک |
 
@@ -52,7 +54,7 @@ course <- engine <- core <- course application
 ./gradlew :core:lintDebug :sample-app:assembleDebug
 ```
 
-برای شروع یک دوره، پوشه `course/template` را در Repository دوره کپی و تمام مقدارهای `replace-me` و شناسه‌های `course-*` را با شناسه‌های پایدار همان دوره جایگزین کنید. سپس با CLI بالا آن را Validate کنید.
+برای شروع یک دوره، ساختار Course Package باید در `AS-Academy-MainCourse/courses/<course-id>/course` ایجاد و با CLI بالا Validate شود. Course App فقط خروجی Compileشده را در Build داخل APK قرار می‌دهد و در Runtime می‌تواند نسخه محتوایی جدیدتر را از کانال رسمی MainCourse دریافت کند.
 
 ## اتصال از Repository دوره
 
@@ -66,13 +68,84 @@ includeBuild("../AS-Academy-Core")
 
 ```kotlin
 dependencies {
-    implementation("com.asdevelopers.academy:core:1.3.0")
+    implementation("com.asdevelopers.academy:core:1.4.0")
 }
 ```
 
 جزئیات کامل در [راهنمای مصرف Core](docs/core-usage.md) و [راهنمای اتصال یک دوره](docs/integration-guide.md) آمده است.
 
-## امکانات موجود در نسخه 1.3.0
+## Runtime Content Update مستقل از APK
+
+از Core 1.4.0، محتوای آموزشی می‌تواند بدون انتشار نسخه جدید APK به‌روزرسانی شود. این قابلیت جایگزین Asset داخلی نمی‌شود؛ Asset داخل APK همچنان نسخه امن و آفلاین دوره است.
+
+جریان استاندارد:
+
+```text
+AS-Academy-MainCourse
+        |
+        | Validate + Compile
+        v
+latest.json + course-package.json
+        |
+        | HTTPS
+        v
+HttpsJsonContentUpdateProvider
+        |
+        v
+CourseContentUpdater
+        |
+        | SHA-256 + Course validation + minimumCoreVersion + SemVer
+        v
+FileCourseUpdateManager
+        |
+        | atomic install / rollback
+        v
+CourseContentStore
+        |
+        +--> installed valid content
+        |
+        +--> bundled APK asset fallback
+```
+
+کلاس‌های اصلی:
+
+- `HttpsJsonContentUpdateProvider`: دریافت Metadata و Course Package فقط از HTTPS با Redirect محدود.
+- `CourseContentUpdater`: بررسی Release و اتصال Provider به Installer.
+- `FileCourseUpdateManager`: کنترل SHA-256، `courseId`، نسخه، `minimumCoreVersion`، نصب Atomic و Backup/Rollback.
+- `CourseContentStore`: هنگام Launch ابتدا نسخه نصب‌شده معتبر را Load می‌کند و در صورت نبودن/خرابی، به Asset داخل APK برمی‌گردد.
+
+فرمت Metadata کانال:
+
+```json
+{
+  "courseId": "basic",
+  "version": "1.1.1",
+  "minimumCoreVersion": "1.4.0",
+  "sha256": "<64-hex-sha256>",
+  "downloadUrl": "https://.../basic-course.json"
+}
+```
+
+قواعد ایمنی:
+
+- Update فقط روی HTTPS انجام می‌شود.
+- SHA-256 قبل از فعال‌سازی Package بررسی می‌شود.
+- Package باید با Validator رسمی Core معتبر باشد.
+- `courseId` باید دقیقاً با Host یکسان باشد.
+- Downgrade مسدود است.
+- اگر Course به Core جدیدتری نیاز داشته باشد نصب نمی‌شود.
+- فایل فعال به‌صورت Atomic جایگزین می‌شود و Backup برای Rollback نگه داشته می‌شود.
+- اگر نسخه نصب‌شده خراب یا ناخوانا باشد، `CourseContentStore` آن را از مسیر فعال خارج می‌کند و Asset آفلاین داخل APK را نمایش می‌دهد.
+- Progress، تنظیمات، Quiz History، Draftها و سایر داده‌های کاربر در Room/DataStore از Course Package جدا هستند و با Content Update حذف نمی‌شوند.
+
+بنابراین App Update و Content Update دو چرخه مستقل دارند:
+
+```text
+App Update      = APK / package / native runtime / UI / Core version
+Content Update  = lesson / quiz / exercise / project / glossary / curriculum data
+```
+
+## امکانات موجود در نسخه 1.4.0
 
 - JSON Course Contract با Stable ID، SemVer، Schema Version و Capability flags
 - Course Validator و Compiler مشترک برای CI و Runtime
@@ -87,6 +160,8 @@ dependencies {
 - Navigation، App Shell، Drawer راست، Settings، About و Branding پویا
 - Backup/Restore تراکنشی schema v3 با خواندن سازگار Backupهای v1/v2
 - Content Update با SHA-256، نصب Atomic و Rollback
+- HTTPS runtime content channel با Metadata استاندارد
+- Installed-first / bundled-asset fallback با `CourseContentStore`
 - Code Runner plugin contract برای Adapterهای اختصاصی زبان
 - WorkManager study reminder با مدیریت مجوز Android 13+
 - `SpacedReviewEngine` و Flashcard generation از Glossary بدون duplication محتوا
@@ -106,6 +181,8 @@ dependencies {
 
 Learning Catalog هیچ تغییر Room یا Backup Schema ایجاد نمی‌کند؛ فقط از مدل‌های موجود `CourseBundle` استفاده می‌کند و از Routeهای عمومی Quiz/Exercise/Project به مقصد واقعی می‌رود.
 
+Runtime Content Update نیز Database Schema را تغییر نمی‌دهد. محتوای آموزشی فایل مستقل است و داده‌های کاربر در پایگاه داده مشترک حفظ می‌شوند.
+
 محدوده دقیق بخش‌های آماده و کارهای باقی‌مانده در [وضعیت پیاده‌سازی](docs/implementation-status.md) ثبت شده است؛ این سند اجازه نمی‌دهد قابلیت نیمه‌کاره به اشتباه Production-ready اعلام شود.
 
 ## مستندات
@@ -123,3 +200,5 @@ Learning Catalog هیچ تغییر Room یا Backup Schema ایجاد نمی‌�
 ## نسخه‌بندی
 
 نسخه App، Core، Database، Course Schema، Course Content و Curriculum مستقل‌اند. سازگاری با `minimumCoreVersion` و `contentSchemaVersion` کنترل می‌شود و تغییر Stable ID بعد از انتشار ممنوع است.
+
+هر تغییر محتوایی که قرار است از کانال Runtime به کاربران برسد باید `manifest.version` دوره را افزایش دهد؛ وگرنه Update Planner آن را نسخه فعلی تشخیص می‌دهد و دوباره نصب نمی‌کند.

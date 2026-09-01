@@ -2,6 +2,22 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.4.0 — 2026-09-01
+
+### Added
+
+- `HttpsJsonContentUpdateProvider` برای دریافت Metadata و Course Package از کانال HTTPS مستقل از APK.
+- Redirect محدود و HTTPS-only برای جلوگیری از downgrade شبکه در مسیر Content Update.
+- `CourseContentStore` با سیاست `installed valid content -> bundled APK asset fallback`.
+- قرنطینه Package نصب‌شده خراب/نامعتبر و بازگشت خودکار به محتوای آفلاین داخل APK.
+- API مشترک `updateManager()` تا تمام Course Appها از همان مسیر نصب Atomic، SHA-256، Version Gate و Rollback استفاده کنند.
+
+### Changed
+
+- نسخه عمومی Core و مختصات ماژول‌ها به `1.4.0` افزایش یافت.
+- Content Update از قابلیت فایل‌محور داخلی به یک Runtime channel کامل و قابل اتصال به MainCourse ارتقا یافت.
+- Database schema روی v4 و Backup schema روی v3 باقی می‌مانند؛ این نسخه Migration داده‌ای نیاز ندارد و Progress کاربر از Course Package مستقل می‌ماند.
+
 ## 1.3.0 — 2026-08-30
 
 ### Added
