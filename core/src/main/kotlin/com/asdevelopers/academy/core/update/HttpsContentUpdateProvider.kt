@@ -32,7 +32,8 @@ class HttpsJsonContentUpdateProvider(
 
     override suspend fun latest(courseId: String): ContentRelease? = withContext(Dispatchers.IO) {
         // Metadata کوچک است و با سقف مشخص خوانده می‌شود تا پاسخ غیرعادی حافظه برنامه را مصرف نکند.
-        val text = request(metadataUrl).use { connection ->
+        val connection = request(metadataUrl)
+        val text = try {
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { reader ->
                 val content = reader.readText()
                 require(content.toByteArray(Charsets.UTF_8).size <= MAX_METADATA_BYTES) {
@@ -40,6 +41,8 @@ class HttpsJsonContentUpdateProvider(
                 }
                 content
             }
+        } finally {
+            connection.disconnect()
         }
         val release = parseRelease(text)
         require(release.courseId == courseId) {
@@ -53,12 +56,15 @@ class HttpsJsonContentUpdateProvider(
         destination.parentFile?.let { parent ->
             require(parent.exists() || parent.mkdirs()) { "Unable to create content download directory" }
         }
-        request(release.downloadUrl).use { connection ->
+        val connection = request(release.downloadUrl)
+        try {
             connection.inputStream.use { input ->
                 destination.outputStream().buffered().use { output ->
                     input.copyTo(output)
                 }
             }
+        } finally {
+            connection.disconnect()
         }
         destination
     }
