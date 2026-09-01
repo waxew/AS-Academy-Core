@@ -87,32 +87,35 @@ AS-Academy-MainCourse
         v
 latest.json + course-package.json
         |
-        | HTTPS
+        | HTTPS metadata
         v
 HttpsJsonContentUpdateProvider
         |
         v
 CourseContentUpdater
         |
-        | SHA-256 + Course validation + minimumCoreVersion + SemVer
+        | SemVer + minimumCoreVersion preflight
+        | download only if installable/newer
         v
 FileCourseUpdateManager
         |
+        | SHA-256 + Course validation + courseId + SemVer + minimumCoreVersion
         | atomic install / rollback
         v
 CourseContentStore
         |
-        +--> installed valid content
+        | compare valid local versions
+        +--> installed update only when newer than APK asset
         |
-        +--> bundled APK asset fallback
+        `--> bundled APK asset when equal/newer or installed is invalid
 ```
 
 کلاس‌های اصلی:
 
 - `HttpsJsonContentUpdateProvider`: دریافت Metadata و Course Package فقط از HTTPS با Redirect محدود.
-- `CourseContentUpdater`: بررسی Release و اتصال Provider به Installer.
-- `FileCourseUpdateManager`: کنترل SHA-256، `courseId`، نسخه، `minimumCoreVersion`، نصب Atomic و Backup/Rollback.
-- `CourseContentStore`: هنگام Launch ابتدا نسخه نصب‌شده معتبر را Load می‌کند و در صورت نبودن/خرابی، به Asset داخل APK برمی‌گردد.
+- `CourseContentUpdater`: ابتدا SemVer و `minimumCoreVersion` را از Metadata بررسی می‌کند و فقط اگر Release قابل نصب و جدیدتر باشد Package بزرگ را دانلود می‌کند.
+- `FileCourseUpdateManager`: کنترل SHA-256، `courseId`، نسخه، `minimumCoreVersion`، نصب Atomic و Backup/Rollback؛ تصمیم Metadata را روی Manifest واقعی Package دوباره بررسی می‌کند.
+- `CourseContentStore`: در Launch هم Asset APK و هم Package نصب‌شده را Validate و مقایسه می‌کند و **جدیدترین نسخه معتبر محلی** را انتخاب می‌کند.
 
 فرمت Metadata کانال:
 
@@ -129,13 +132,17 @@ CourseContentStore
 قواعد ایمنی:
 
 - Update فقط روی HTTPS انجام می‌شود.
+- اگر Metadata همان نسخه فعال، Downgrade یا Course نیازمند Core جدیدتر را گزارش کند، Package بزرگ اصلاً دانلود نمی‌شود.
 - SHA-256 قبل از فعال‌سازی Package بررسی می‌شود.
 - Package باید با Validator رسمی Core معتبر باشد.
 - `courseId` باید دقیقاً با Host یکسان باشد.
 - Downgrade مسدود است.
 - اگر Course به Core جدیدتری نیاز داشته باشد نصب نمی‌شود.
+- تصمیم Version/Core پس از دانلود روی Manifest واقعی Package دوباره اجرا می‌شود؛ Metadata مرجع نهایی اعتماد نیست.
 - فایل فعال به‌صورت Atomic جایگزین می‌شود و Backup برای Rollback نگه داشته می‌شود.
-- اگر نسخه نصب‌شده خراب یا ناخوانا باشد، `CourseContentStore` آن را از مسیر فعال خارج می‌کند و Asset آفلاین داخل APK را نمایش می‌دهد.
+- اگر نسخه نصب‌شده خراب یا ناخوانا باشد، `CourseContentStore` آن را از مسیر فعال خارج می‌کند و Asset آفلاین معتبر داخل APK را نمایش می‌دهد.
+- اگر APK بعدی Course هم‌نسخه یا جدیدتری نسبت به Runtime Package قبلی Bundle کند، Asset APK برنده می‌شود و Runtime Package قدیمی از مسیر فعال خارج می‌شود؛ بنابراین App Update در حالت Offline به Course قدیمی عقب نمی‌رود.
+- اگر Asset APK به هر دلیل نامعتبر باشد ولی Package نصب‌شده معتبر وجود داشته باشد، نسخه نصب‌شده حفظ می‌شود تا آموزش‌ها از دسترس خارج نشوند.
 - Progress، تنظیمات، Quiz History، Draftها و سایر داده‌های کاربر در Room/DataStore از Course Package جدا هستند و با Content Update حذف نمی‌شوند.
 
 بنابراین App Update و Content Update دو چرخه مستقل دارند:
@@ -160,8 +167,8 @@ Content Update  = lesson / quiz / exercise / project / glossary / curriculum dat
 - Navigation، App Shell، Drawer راست، Settings، About و Branding پویا
 - Backup/Restore تراکنشی schema v3 با خواندن سازگار Backupهای v1/v2
 - Content Update با SHA-256، نصب Atomic و Rollback
-- HTTPS runtime content channel با Metadata استاندارد
-- Installed-first / bundled-asset fallback با `CourseContentStore`
+- HTTPS runtime content channel با Metadata استاندارد و Preflight قبل از دانلود
+- Newest-valid-local selection بین Runtime Package و APK Asset با `CourseContentStore`
 - Code Runner plugin contract برای Adapterهای اختصاصی زبان
 - WorkManager study reminder با مدیریت مجوز Android 13+
 - `SpacedReviewEngine` و Flashcard generation از Glossary بدون duplication محتوا
