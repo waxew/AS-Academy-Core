@@ -7,6 +7,7 @@ import com.asdevelopers.academy.core.content.CoursePackageLoader
 import com.asdevelopers.academy.core.content.CoursePackageSourceOverrides
 import com.asdevelopers.academy.core.content.FileCoursePackageSource
 import com.asdevelopers.academy.core.version.CoreVersion
+import com.asdevelopers.academy.core.version.SemanticVersion
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,8 +27,8 @@ data class CourseContentSnapshot(
 /**
  * Store مشترک Content برای همه Course Appها.
  *
- * اول Package نصب‌شده و Validateشده را امتحان می‌کند؛ در نبود/خرابی آن بدون از دست رفتن قابلیت آفلاین
- * به Asset داخلی APK برمی‌گردد. فایل خراب قرنطینه می‌شود تا هر Launch دوباره همان خطا را تکرار نکند.
+ * نسخه نصب‌شده و Asset داخل APK هر دو Validate می‌شوند و جدیدترین نسخه معتبر محلی انتخاب می‌شود.
+ * این قاعده مانع می‌شود یک Runtime Update قدیمی بعد از نصب APK جدیدتر روی Course جدید Bundleشده سایه بیندازد.
  */
 class CourseContentStore(
     context: Context,
@@ -62,35 +63,80 @@ class CourseContentStore(
         )
 
     /**
-     * منبع ترجیحی را Load می‌کند. Update فقط زمانی فعال است که Contract معتبر و courseId دقیقاً درست باشد.
+     * جدیدترین منبع معتبر محلی را Resolve می‌کند.
+     *
+     * - Asset داخل APK همیشه بدون Override خوانده و Validate می‌شود.
+     * - Package نصب‌شده نیز مستقل Validate و با courseId مورد انتظار تطبیق داده می‌شود.
+     * - فقط وقتی نسخه نصب‌شده از Asset واقعاً جدیدتر باشد، Installed Update انتخاب می‌شود.
+     * - نسخه نصب‌شده مساوی/قدیمی از مسیر فعال خارج می‌شود تا APK جدیدتر در حالت Offline عقب نرود.
      */
     suspend fun loadPreferred(): CourseContentSnapshot {
-        if (installedPackageFile.isFile) {
-            when (val installed = loader.load(FileCoursePackageSource(installedPackageFile))) {
-                is CourseLoadResult.Success -> {
-                    if (installed.bundle.manifest.courseId == courseId) {
-                        return CourseContentSnapshot(installed, CourseContentOrigin.INSTALLED_UPDATE)
-                    }
-                    quarantineInstalledPackage("course-id-mismatch")
-                    return loadBundled(
-                        "Installed content was ignored because its courseId did not match $courseId"
-                    )
-                }
-                is CourseLoadResult.Invalid -> {
-                    quarantineInstalledPackage("invalid")
-                    return loadBundled(
-                        "Installed content failed validation and the bundled offline course was restored"
-                    )
-                }
-                is CourseLoadResult.Failure -> {
-                    quarantineInstalledPackage("failed")
-                    return loadBundled(
-                        "Installed content could not be read and the bundled offline course was restored"
-                    )
-                }
-            }
+        // مقایسه باید Asset واقعی APK را ببیند، نه Override باقی‌مانده از Compose قبلی همین Process.
+        CoursePackageSourceOverrides.clear(bundledAssetPath)
+        val bundled = normalizeCourseId(
+            loader.load(AssetCoursePackageSource(appContext, bundledAssetPath)),
+            sourceLabel = "Bundled"
+        )
+        val bundledSuccess = bundled as? CourseLoadResult.Success
+
+        if (!installedPackageFile.isFile) {
+            return CourseContentSnapshot(bundled, CourseContentOrigin.BUNDLED_ASSET)
         }
-        return loadBundled()
+
+        val installedRaw = loader.load(FileCoursePackageSource(installedPackageFile))
+        val installed = normalizeCourseId(installedRaw, sourceLabel = "Installed")
+        val installedSuccess = installed as? CourseLoadResult.Success
+
+        if (installedSuccess == null) {
+            val reason = when (installed) {
+                is CourseLoadResult.Invalid -> "invalid"
+                is CourseLoadResult.Failure -> "failed"
+                is CourseLoadResult.Success -> "unexpected"
+            }
+            quarantineInstalledPackage(reason)
+            return CourseContentSnapshot(
+                result = bundled.withWarning(
+                    "Installed content was quarantined and the bundled offline course was selected"
+                ),
+                origin = CourseContentOrigin.BUNDLED_ASSET
+            )
+        }
+
+        // اگر APK asset خراب باشد اما Runtime Package معتبر قبلی وجود داشته باشد، آموزش از دسترس خارج نمی‌شود.
+        if (bundledSuccess == null) {
+            return CourseContentSnapshot(installedSuccess, CourseContentOrigin.INSTALLED_UPDATE)
+        }
+
+        val installedVersion = SemanticVersion.parseOrNull(installedSuccess.bundle.manifest.version)
+        val bundledVersion = SemanticVersion.parseOrNull(bundledSuccess.bundle.manifest.version)
+
+        // Validator باید SemVer را تضمین کند؛ این شاخه دفاعی مانع انتخاب Package مبهم در صورت Contract Regression است.
+        if (installedVersion == null) {
+            quarantineInstalledPackage("invalid-version")
+            return CourseContentSnapshot(
+                bundledSuccess.withWarning("Installed content had an invalid semantic version and was ignored"),
+                CourseContentOrigin.BUNDLED_ASSET
+            )
+        }
+        if (bundledVersion == null) {
+            return CourseContentSnapshot(
+                installedSuccess.withWarning("Bundled content had an invalid semantic version; installed content was retained"),
+                CourseContentOrigin.INSTALLED_UPDATE
+            )
+        }
+
+        return if (installedVersion > bundledVersion) {
+            CourseContentSnapshot(installedSuccess, CourseContentOrigin.INSTALLED_UPDATE)
+        } else {
+            // Equal version نیز Bundle را برنده می‌کند؛ تغییر محتوا بدون version bump طبق قرارداد MainCourse مجاز نیست.
+            quarantineInstalledPackage("superseded")
+            CourseContentSnapshot(
+                bundledSuccess.withWarning(
+                    "Bundled content ${bundledSuccess.bundle.manifest.version} superseded installed content ${installedSuccess.bundle.manifest.version}"
+                ),
+                CourseContentOrigin.BUNDLED_ASSET
+            )
+        }
     }
 
     /**
@@ -113,20 +159,7 @@ class CourseContentStore(
     /** Resolve و Activate را در یک فراخوانی انجام می‌دهد تا Host ترتیب این دو مرحله را تکرار نکند. */
     suspend fun loadAndActivatePreferred(): CourseContentSnapshot = activate(loadPreferred())
 
-    /** Asset همیشه آخرین شبکه ایمنی است و خود آن نیز توسط Loader رسمی Validate می‌شود. */
-    private suspend fun loadBundled(extraWarning: String? = null): CourseContentSnapshot {
-        // قبل از خواندن fallback، Override قبلی پاک می‌شود تا AssetCoursePackageSource وارد حلقه نشود.
-        CoursePackageSourceOverrides.clear(bundledAssetPath)
-        val loaded = loader.load(AssetCoursePackageSource(appContext, bundledAssetPath))
-        val result = if (extraWarning != null && loaded is CourseLoadResult.Success) {
-            loaded.copy(warnings = listOf(extraWarning) + loaded.warnings)
-        } else {
-            loaded
-        }
-        return CourseContentSnapshot(result, CourseContentOrigin.BUNDLED_ASSET)
-    }
-
-    /** Package خراب از نام فعال خارج می‌شود؛ Backup نصب‌شده توسط Installer مستقل باقی می‌ماند. */
+    /** Package خراب/قدیمی از نام فعال خارج می‌شود؛ Backup Installer مستقل باقی می‌ماند. */
     private suspend fun quarantineInstalledPackage(reason: String) = withContext(Dispatchers.IO) {
         CoursePackageSourceOverrides.clear(bundledAssetPath)
         if (!installedPackageFile.exists()) return@withContext
@@ -135,4 +168,19 @@ class CourseContentStore(
         rejected.delete()
         installedPackageFile.renameTo(rejected)
     }
+
+    /** موفقیت Course با شناسه اشتباه به Invalid صریح تبدیل می‌شود تا هر دو منبع یک Policy داشته باشند. */
+    private fun normalizeCourseId(result: CourseLoadResult, sourceLabel: String): CourseLoadResult =
+        if (result is CourseLoadResult.Success && result.bundle.manifest.courseId != courseId) {
+            CourseLoadResult.Invalid(
+                errors = listOf("$sourceLabel courseId ${result.bundle.manifest.courseId} does not match expected $courseId"),
+                warnings = result.warnings
+            )
+        } else {
+            result
+        }
+
+    /** Warning فقط به Result موفق افزوده می‌شود؛ خطاهای اصلی Invalid/Failure دست‌نخورده می‌مانند. */
+    private fun CourseLoadResult.withWarning(message: String): CourseLoadResult =
+        if (this is CourseLoadResult.Success) copy(warnings = listOf(message) + warnings) else this
 }
