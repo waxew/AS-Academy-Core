@@ -4,6 +4,7 @@ import android.content.Context
 import com.asdevelopers.academy.core.content.AssetCoursePackageSource
 import com.asdevelopers.academy.core.content.CourseLoadResult
 import com.asdevelopers.academy.core.content.CoursePackageLoader
+import com.asdevelopers.academy.core.content.CoursePackageSourceOverrides
 import com.asdevelopers.academy.core.content.FileCoursePackageSource
 import com.asdevelopers.academy.core.version.CoreVersion
 import java.io.File
@@ -92,8 +93,30 @@ class CourseContentStore(
         return loadBundled()
     }
 
+    /**
+     * Snapshot معتبر را برای Loaderهای موجود Host فعال می‌کند.
+     * Hostهای فعلی که `AssetCoursePackageSource` دارند بدون بازنویسی Screen/Navigation همان Package را می‌خوانند.
+     */
+    fun activate(snapshot: CourseContentSnapshot): CourseContentSnapshot {
+        when {
+            snapshot.origin == CourseContentOrigin.INSTALLED_UPDATE &&
+                snapshot.result is CourseLoadResult.Success &&
+                installedPackageFile.isFile -> CoursePackageSourceOverrides.activate(
+                    bundledAssetPath,
+                    installedPackageFile
+                )
+            else -> CoursePackageSourceOverrides.clear(bundledAssetPath)
+        }
+        return snapshot
+    }
+
+    /** Resolve و Activate را در یک فراخوانی انجام می‌دهد تا Host ترتیب این دو مرحله را تکرار نکند. */
+    suspend fun loadAndActivatePreferred(): CourseContentSnapshot = activate(loadPreferred())
+
     /** Asset همیشه آخرین شبکه ایمنی است و خود آن نیز توسط Loader رسمی Validate می‌شود. */
     private suspend fun loadBundled(extraWarning: String? = null): CourseContentSnapshot {
+        // قبل از خواندن fallback، Override قبلی پاک می‌شود تا AssetCoursePackageSource وارد حلقه نشود.
+        CoursePackageSourceOverrides.clear(bundledAssetPath)
         val loaded = loader.load(AssetCoursePackageSource(appContext, bundledAssetPath))
         val result = if (extraWarning != null && loaded is CourseLoadResult.Success) {
             loaded.copy(warnings = listOf(extraWarning) + loaded.warnings)
@@ -105,6 +128,7 @@ class CourseContentStore(
 
     /** Package خراب از نام فعال خارج می‌شود؛ Backup نصب‌شده توسط Installer مستقل باقی می‌ماند. */
     private suspend fun quarantineInstalledPackage(reason: String) = withContext(Dispatchers.IO) {
+        CoursePackageSourceOverrides.clear(bundledAssetPath)
         if (!installedPackageFile.exists()) return@withContext
         if (!installDirectory.exists() && !installDirectory.mkdirs()) return@withContext
         val rejected = File(installDirectory, "course-package.$reason.rejected")
