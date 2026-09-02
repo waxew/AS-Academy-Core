@@ -11,6 +11,8 @@ android {
 
     defaultConfig {
         minSdk = 23
+        // Migration testها روی AndroidJUnitRunner اجرا می‌شوند تا SQLite/Room واقعی Android بررسی شود.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -22,6 +24,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // Schemaهای تولیدی Room کنار سورس نگهداری می‌شوند تا Migrationها قابل audit و تست باشند.
+    sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 }
 
 ksp {
@@ -55,7 +60,12 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
 
-    // Unit Testهای Android Runtime برای Repository و Migrationهای بعدی آماده شده‌اند.
+    // Unit Testهای Android Runtime برای Repository و قراردادهای JVM استفاده می‌شوند.
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
+
+    // Instrumentation testها Migration واقعی Room/SQLite را روی Android اجرا می‌کنند.
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.room.testing)
 }
