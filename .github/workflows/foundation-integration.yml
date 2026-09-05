@@ -7,24 +7,28 @@ on:
       - integration/**
   pull_request:
 
+concurrency:
+  group: foundation-integration-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   three-repo-foundation:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: AS-Academy-Core
 
       - name: Checkout MainUi main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: waxew/AS-Academy-MainUi
           ref: main
           path: AS-Academy-MainUi
 
       - name: Checkout MainCourse main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: waxew/AS-Academy-MainCourse
           ref: main
