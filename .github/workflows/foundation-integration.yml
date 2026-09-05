@@ -23,11 +23,11 @@ jobs:
           ref: feat/foundation-v1-unification
           path: AS-Academy-MainUi
 
-      - name: Checkout MainCourse foundation branch
+      - name: Checkout MainCourse main
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainCourse
-          ref: feat/foundation-v1-unification
+          ref: main
           path: AS-Academy-MainCourse
 
       - uses: actions/setup-python@v5
