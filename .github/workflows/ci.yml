@@ -22,6 +22,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Validate integration contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          contract = json.loads(Path("integration/contract.json").read_text())
+          template = json.loads(Path("course/template/manifest.json").read_text())
+
+          required = contract["courseManifestRequiredFields"]
+          missing = [key for key in required if key not in template]
+          if missing:
+              raise SystemExit(f"Course template is missing required integration fields: {missing}")
+          if template["contentSchemaVersion"] != contract["contentSchemaVersion"]:
+              raise SystemExit(
+                  f"Template schema {template['contentSchemaVersion']} does not match contract schema {contract['contentSchemaVersion']}"
+              )
+          if contract["android"] != {"minSdk": 23, "compileSdk": 36, "javaVersion": 17}:
+              raise SystemExit("integration/contract.json Android baseline drifted from the supported Core baseline")
+          print(f"Integration contract v{contract['contractVersion']} validated for Core {contract['coreVersion']}")
+          PY
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
