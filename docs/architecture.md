@@ -1,80 +1,133 @@
-# معماری AS Academy Core
+# معماری AS Academy Foundation 1.5
 
 ## هدف
 
-`AS-Academy-Core` پلتفرم مشترک اپ‌های آموزشی است، نه یک Course خاص. طراحی به‌گونه‌ای است که یک اپ مستقل JavaScript و یک اپ All-in-One چنددوره‌ای هر دو همان Runtime و موتورهای عمومی را مصرف کنند.
+`AS-Academy-Core` موتور و Runtime مشترک است. معماری Foundation عمداً مسئولیت‌ها را بین سه Repository جدا می‌کند تا هیچ اپ دوره‌ای نسخه محلی و واگرا از runtime، UI یا محتوا نسازد.
 
 ## جهت وابستگی
 
 ```mermaid
 flowchart TD
-    Course["course: قرارداد محتوا"] --> Engine["engine: منطق آموزشی"]
-    Engine --> Core["core: Runtime اندروید"]
-    Engine --> Tools["tools: CLI محتوا"]
-    Core --> Host["اپ دوره"]
-    Core --> Sample["sample-app"]
+    MainCourse["AS-Academy-MainCourse: content"] --> Core["AS-Academy-Core: runtime + engines"]
+    Core --> MainUi["AS-Academy-MainUi: presentation"]
+    MainUi --> Host["Thin Course App"]
+    Core --> Host
+    MainCourse --> Host
 ```
 
-هیچ ماژول پایین‌دستی نباید به Host یا Course خاص وابسته شود. `course` و `engine` عمداً Kotlin/JVM هستند تا Validator و ابزار انتشار بدون Android SDK اجرا شوند.
+در داخل Core:
 
-## مرزها
-
-### Core مالک چیست؟
-
-- App Shell، Navigation و Design System
-- Room schema، DAO، Migration و Repository
-- Profile، Settings، Drawer، About و Study Reminder
-- Content decode/validation/import/update/rollback
-- Lesson Renderer، Progress، Quiz، Exercise، Project، Search و Achievement
-- Bookmark، User Note، Backup/Restore و Code Runner contract
-
-### Course مالک چیست؟
-
-- سرفصل، درس، Quiz، Exercise، Project و Glossary همان موضوع
-- Asset، منبع، رنگ و هویت بصری همان دوره
-- Capability configuration
-- Adapter اختصاصی موضوع؛ مثلاً Runner امن JavaScript یا Viewer مدار
-
-Course حق ساخت نسخه محلی از APIهای Core را ندارد. اگر Core یک Slot یا Plugin مورد نیاز را ندارد، ابتدا قرارداد عمومی آن در Core اضافه می‌شود.
-
-## جریان محتوا
-
-```mermaid
-flowchart LR
-    Editable["فایل‌های پوشه Course"] --> CLI["Validator / Compiler"]
-    CLI --> Bundle["bundle.json"]
-    Bundle --> Loader["Android Loader"]
-    Loader --> UI["Renderer و Engineها"]
-    Loader --> Index["Room FTS Index"]
+```text
+course <- engine <- core
+             ^
+             |
+           tools
 ```
 
-CLI و Android Loader از `CoursePackageCodec` و `CoursePackageValidator` یکسان استفاده می‌کنند؛ بنابراین محتوایی که CI پذیرفته با قواعد متفاوتی در Runtime روبه‌رو نمی‌شود.
+`course` و `engine` Kotlin/JVM باقی می‌مانند تا validation و tooling بدون Android SDK قابل اجرا باشند.
+
+## Single Source of Truth
+
+### Core
+
+مالک این موارد است:
+
+- `AcademyRuntime` و composition تمام runtime dependencyها
+- Room schema، DAO، migration و repository
+- public domain/read models
+- DataStore، WorkManager و notification scheduling
+- content codec/validation/update/install/rollback
+- backup/restore
+- engineهای Progress، Quiz، Exercise، Project، Search، Review، Placement و Achievement
+- `AcademyBackend` و مرزهای Auth / Sync / Storage
+
+Core **Compose presentation، App Shell، Drawer، Theme یا navigation UI** را نگهداری نمی‌کند.
+
+### MainUi
+
+مالک presentation مشترک است:
+
+- Design System و Theme
+- Screenها و componentها
+- navigation/presentation shell
+- rendering و UX آموزشی
+- reference application در `academy-viewer`
+
+MainUi فقط public APIهای Core را consume می‌کند. ساخت مستقیم `AcademyDatabase`، DAO، Room implementation یا provider client مانند Supabase در MainUi ممنوع است.
+
+### MainCourse
+
+فقط محتوای آموزشی و metadata نسخه‌دار را نگهداری می‌کند:
+
+- Lesson
+- Quiz
+- Exercise
+- Project
+- Glossary/Resources/Assets
+- Manifest و curriculum metadata
+
+Runtime implementation، database، UI framework یا backend SDK نباید وارد MainCourse شود.
 
 ## جریان داده کاربر
 
 ```text
-Compose UI -> ViewModel/State holder در Host -> Core Repository -> Room/DataStore
+MainUi -> AcademyRuntime public repositories -> Room/DataStore
 ```
 
-UI نباید DAO را مستقیم صدا بزند. Course Package داده قابل بازسازی است، اما Progress، Note، Draft و نتیجه Quiz داده کاربرند و در Migration یا Content Update حذف نمی‌شوند.
+Presentation به Entity/DAO به‌عنوان implementation وابسته نمی‌شود. Core entityها را به public modelها map می‌کند.
 
-## Offline First
+## جریان محتوا
 
-Bundle اولیه داخل assets اپ قرار می‌گیرد. درس، جست‌وجو، Bookmark، آزمون، تمرین، Progress و Backup بدون شبکه کار می‌کنند. شبکه فقط یک Source اختیاری برای دریافت Bundle جدید یا Sync آینده است؛ Core به سرویس مشخصی قفل نشده است.
+```text
+MainCourse editable content
+        |
+        v
+Core Validator / Compiler
+        |
+        v
+validated package / bundled snapshot / HTTPS runtime channel
+        |
+        v
+Core content runtime
+        |
+        v
+MainUi renderer
+```
 
-## توسعه قابلیت اختصاصی
+Content Package قابل بازسازی است؛ Progress، Notes، Quiz History و Draftها داده کاربر هستند و مستقل نگهداری می‌شوند.
 
-قابلیت‌های عمومی از APIهای کوچک قابل تزریق استفاده می‌کنند. برای نمونه، هر زبان `CodeRunnerPlugin` خود را ثبت می‌کند، اما Request/Result، Timeout metadata و Registry در Core باقی می‌مانند. همین الگو برای Asset renderer یا destinationهای Navigation اختصاصی قابل استفاده است.
+## Backend boundary
 
-## محورهای نسخه
+Foundation به provider خاصی قفل نیست. `AcademyBackend` سه gateway عمومی دارد:
 
-| محور | محل | کاربرد |
-|---|---|---|
-| Core API | `CoreVersion.CURRENT` | سازگاری Runtime |
-| Database | `@Database(version = 3)` | Migration داده کاربر و یکسان‌سازی شاخه‌های آزمایشی |
-| Course Schema | `CoreVersion.COURSE_SCHEMA` | شکل JSON قابل خواندن |
-| Course Content | `manifest.version` | انتشار محتوای یک دوره |
-| Curriculum | `manifest.curriculumVersion` | تغییر برنامه آموزشی |
-| App | `versionName/versionCode` Host | انتشار فروشگاه |
+- Auth
+- Sync
+- Storage
 
-این شماره‌ها نباید به جای یکدیگر استفاده شوند.
+`OfflineAcademyBackend` default است. providerهایی مثل Supabase فقط پشت این boundary پیاده‌سازی می‌شوند. secret key یا service-role credential نباید در Android client یا Repository قرار گیرد.
+
+## Offline-first
+
+Bundled content و local user state بدون شبکه کار می‌کنند. شبکه فقط برای update/sync اختیاری است. خرابی remote backend نباید دسترسی به محتوای معتبر local را از بین ببرد.
+
+## Contract و versioning
+
+مرجع machine-readable: `integration/contract.json`.
+
+| محور | مقدار Foundation 1.5 | کاربرد |
+|---|---:|---|
+| Core API | 1.5.0 | runtime/public API compatibility |
+| Contract | 1 | compatibility بین سه repo |
+| Database | 4 | migration داده کاربر |
+| Course Schema | 1 | JSON contract |
+| Backup Schema | 3 | backup compatibility |
+| Android | min 23 / compile 36 | platform baseline |
+| Java | 17 | toolchain baseline |
+
+`manifest.version`، `minimumCoreVersion` و `contentSchemaVersion` مستقل از version اپ هستند و نباید با هم جایگزین شوند.
+
+## Reference App و E2E
+
+Reference app رسمی در `AS-Academy-MainUi/academy-viewer` قرار دارد. Workflow `Foundation Integration` از Core هر سه Repository را checkout می‌کند، Contractها را compare/validate می‌کند، Core و MainUi را test می‌کند و reference app را assemble می‌کند.
+
+این workflow مرجع نهایی سازگاری Foundation است.

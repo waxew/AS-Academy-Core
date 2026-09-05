@@ -1,48 +1,53 @@
-# وضعیت پیاده‌سازی AS Academy Core
+# وضعیت پیاده‌سازی AS Academy Foundation
 
-آخرین بازبینی: 2026-08-30 — نسخه Core: `1.3.0`
+آخرین بازبینی: 2026-09-06 — Core baseline: `1.5.0`
 
-این جدول بین «API و پیاده‌سازی پایه موجود» و «آماده برای همه سناریوهای Production» تفاوت می‌گذارد.
+این سند فقط وضعیت Foundation مشترک سه Repository را ثبت می‌کند و ownership را با `integration/contract.json` هماهنگ نگه می‌دارد.
 
-| بخش | وضعیت | توضیح |
+| بخش | وضعیت | مالک / توضیح |
 |---|---|---|
-| Course models/serialization | پیاده‌سازی شده | Manifest، Branding، Level، Chapter، Lesson، Activity و Resource |
-| Codec/Validator/CLI | پیاده‌سازی شده | Validate پوشه و Compile به Bundle واحد |
-| Progress Engine | پیاده‌سازی و Unit Test | محاسبه Block progress و Summary |
-| Learning Path | پیاده‌سازی و Unit Test | Continue Learning، درصد Course/Level، قفل زنجیره‌ای و first-lesson lookup برای Placement |
-| Activity completion | پیاده‌سازی شده | تکمیل Exercise/Project در Room، Repository و Backup/Restore |
-| Quiz Engine | پیاده‌سازی و Unit Test | سؤال‌های انتخابی، Fill Code، Ordering، Matching و weak-topic analysis |
-| Quiz UI | پیاده‌سازی پایه | Screen مشترک برای انواع QuestionType و ثبت نتیجه از Callback؛ History persistence از Repository مشترک مصرف می‌شود |
-| Learning Catalog | پیاده‌سازی شده | Search و Filter مشترک Quiz/Exercise/Project، metadata/card استاندارد، Route عمومی و Callback به Activity Screenها |
-| Placement | پیاده‌سازی و Unit Test | Policy قابل تنظیم، Policy چهارسطحی، Repository نتیجه Persist شده، Route و Placement Summary UI |
-| Weak Topic Review | پیاده‌سازی و Unit Test | تحلیل persisted weakTags، Repository Course-scoped، Route و Screen مشترک |
-| Spaced Review / Flashcard | پیاده‌سازی و Unit Test | Glossary -> Flashcard، Scheduling، Due selection، Session snapshot/batch، Room، Backup/Restore و Review Screen |
-| Exercise | پیاده‌سازی پایه | مدل، Draft، Expected-output evaluator و Screen مشترک پاسخ/Hint/Solution؛ Runner واقعی هر زبان Plugin است |
-| Project/Achievement | پیاده‌سازی پایه | مدل، persistence، rule evaluation و Screen مشترک Milestone/Draft؛ UX پیشرفته پروژه باقی مانده |
-| Search/Bookmark/Notes | پیاده‌سازی شده | Room FTS، Repository و مدل‌های چنددوره‌ای؛ Screenهای کامل مدیریت هنوز باقی مانده‌اند |
-| Room database | پیاده‌سازی شده | Schema v4، Migration غیرمخرب 1→2→3→4، تشخیص دو شکل v2 و Flashcard Progress؛ تست Instrumented Migration و commit schema JSON هنوز باید افزوده شود |
-| Settings/Profile/Drawer | پیاده‌سازی شده | DataStore، Theme/Font scale، URI پایدار تصویر، thumbnail و Drawer راست |
-| Navigation/App Shell/Theme | پیاده‌سازی شده | Home/Settings/About/Lesson/Quiz/Exercise/Project + Placement/Weak Review/Flashcard Review/Learning Catalog و Branding پویا |
-| Lesson Renderer | پیاده‌سازی پایه | Blockهای عمومی و لینک واقعی Quiz/Exercise/Project از Callback؛ Asset renderer از Host تزریق می‌شود |
-| Backup/Restore | پیاده‌سازی و Unit Test قرارداد | Schema v3، خواندن سازگار v1/v2، Flashcard Progress و Restore تراکنشی |
-| Content Update | پیاده‌سازی شده | SHA-256، SemVer، نصب Atomic و Rollback فایل محلی |
-| Notifications | پیاده‌سازی پایه | WorkManager و بررسی مجوز Android 13+ |
-| Sample App | موجود و یکپارچه | Loader/Shell/Settings/Lesson + Quiz persistence + Placement + Weak Review + Flashcard Review؛ Catalog API نیز در sample-app compile می‌شود |
-| CI | موجود | JVM tests، Template validation، Android lint و Sample build |
-| انتشار Maven/GitHub Packages | باقی مانده | فعلاً Composite Build روش رسمی مصرف است |
-| Cloud Sync/App Update service | خارج از نسخه 1.3 | API سرویس و سیاست Conflict هنوز طراحی نشده |
-| Code runners واقعی | مختص Course | فقط Contract/Registry عمومی در Core است |
+| Shared Contract v1 | تکمیل | byte-identical در Core/MainUi/MainCourse و enforce در CI |
+| Core public API 1.5.0 | تکمیل | version baseline و compatibility range رسمی |
+| `AcademyRuntime` composition root | تکمیل | Core؛ database/repositories/settings/reminder/backend از یک نقطه ساخته می‌شوند |
+| Public domain/read models | تکمیل | Core؛ MainUi به persistence entity به‌عنوان presentation contract وابسته نیست |
+| Room database | تکمیل پایه | Core؛ schema v4 و migrationهای غیرمخرب موجود |
+| User-state repositories | تکمیل | Core؛ Progress/Bookmark/Notes/Search/Achievement/Quiz/Draft/Project/Completion |
+| Settings / notifications | تکمیل پایه | Core؛ DataStore و WorkManager scheduler |
+| Backend boundary | تکمیل | Core؛ `AcademyBackend` + Auth/Sync/Storage gateways + offline default |
+| Supabase provider | پیکربندی نشده | هیچ پروژه Supabase مشخصی برای AS Academy به Foundation متصل نشده؛ اتصال provider نباید با حدس به پروژه دیگری انجام شود |
+| Runtime Content Update | تکمیل | Core؛ HTTPS, SemVer, minimumCoreVersion, SHA-256, atomic install/rollback و local fallback |
+| Backup/Restore | تکمیل پایه | Core؛ user state مستقل از Course package |
+| Compose/UI ownership | تکمیل | MainUi؛ presentation قدیمی از Core حذف شده |
+| Design System / Screens / Navigation | تکمیل در baseline | MainUi؛ توسعه UX بعدی مستقل از Core runtime انجام می‌شود |
+| MainCourse content-only boundary | تکمیل | MainCourse؛ manifestهای canonical schema v1 validate می‌شوند |
+| Compatibility Matrix | تکمیل | مستند و machine-readable در Foundation 1.5 |
+| Cross-repo CI | تکمیل | Contract compare + validators + Core test + MainUi test + reference app assemble |
+| Reference App | تکمیل | `AS-Academy-MainUi/academy-viewer`؛ sample-app قدیمی Core حذف شده |
+| End-to-end build gate | تکمیل | reference app با Core + MainUi + MainCourse واقعی assemble می‌شود |
+| Maven/GitHub Packages publication | هنوز فعال نشده | Composite Build روش رسمی داخلی است؛ coordinate `com.asdevelopers.academy:core:1.5.0` baseline قرارداد است ولی انتشار artifact باید در release pipeline جداگانه فعال شود |
+| Release/tag Foundation 1.5 | در انتظار gate نهایی | فقط بعد از سبز شدن main هر سه repo انجام می‌شود |
 
-## معیار انتقال قابلیت از Course به Core
+## مواردی که عمداً جزو نقص Foundation محسوب نمی‌شوند
 
-اگر یک قابلیت در حداقل دو Course قابل استفاده است، Issue آن باید در Core باز و API عمومی آن اینجا پیاده‌سازی شود. Course می‌تواند تا زمان انتشار Core یک Adapter محدود داشته باشد، اما Fork دائمی Engine یا UI عمومی پذیرفته نیست.
+این موارد featureهای بعدی محصول هستند و blocker یکپارچگی سه Repository نیستند:
 
-## گام‌های کیفیت بعدی
+- provider مشخص Cloud Sync تا زمانی که backend واقعی انتخاب و credential/config آن مشخص نشده باشد؛
+- Code Runner اختصاصی هر زبان؛
+- UXهای تخصصی‌تر Course-specific؛
+- analytics/streak/mastery توسعه‌یافته؛
+- providerهای media/cache اختصاصی.
 
-1. افزودن Room Migration instrumentation test و Commit schema JSON تولیدشده
-2. تکمیل UIهای Search، Bookmark و Notes
-3. افزودن Asset loader تصویری/صوتی با cache و accessibility
-4. انتشار Artifact نسخه‌دار برای جایگزینی Composite Build در Release CI
-5. افزودن API اختیاری Cloud Sync بدون شکستن Offline-first
-6. افزودن UI تخصصی‌تر برای Code Runner و ارزیابی خودکار Exerciseهای زبان‌محور
-7. اضافه‌کردن آمار Review/Streak و Mastery Dashboard روی Engineهای موجود
+## Definition of Done برای Foundation 1.5
+
+Foundation زمانی Final است که:
+
+1. Contract هر سه `main` یکسان باشد؛
+2. Core هیچ Compose presentation قدیمی نگه ندارد؛
+3. MainUi implementationهای Room/backend را نسازد؛
+4. MainCourse runtime implementation نداشته باشد؛
+5. Core quality gates سبز باشد؛
+6. MainUi quality gates روی baseline جدید Core سبز باشد؛
+7. MainCourse contract gate سبز باشد؛
+8. Foundation Integration سه-repo و `academy-viewer` سبز باشد؛
+9. PR نهایی Core merge شود؛
+10. baseline/tag release تنها پس از verify شدن `main` ایجاد شود.
