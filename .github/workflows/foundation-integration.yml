@@ -3,7 +3,7 @@ name: Foundation Integration
 on:
   push:
     branches:
-      - feat/foundation-v1-unification
+      - main
       - integration/**
   pull_request:
 
@@ -16,18 +16,18 @@ jobs:
         with:
           path: AS-Academy-Core
 
-      - name: Checkout MainUi main
+      - name: Checkout MainUi foundation candidate
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainUi
-          ref: main
+          ref: ${{ github.event_name == 'pull_request' && 'feat/foundation-v1-finalize' || 'main' }}
           path: AS-Academy-MainUi
 
-      - name: Checkout MainCourse main
+      - name: Checkout MainCourse foundation candidate
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainCourse
-          ref: main
+          ref: ${{ github.event_name == 'pull_request' && 'feat/foundation-v1-finalize' || 'main' }}
           path: AS-Academy-MainCourse
 
       - uses: actions/setup-python@v5
@@ -46,7 +46,7 @@ jobs:
           python AS-Academy-MainCourse/integration/validate_contract.py
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -64,3 +64,10 @@ jobs:
         run: |
           chmod +x ../AS-Academy-Core/gradlew
           ../AS-Academy-Core/gradlew -p . :main-ui:testDebugUnitTest
+
+      - name: Assemble reference app end-to-end
+        working-directory: AS-Academy-MainUi
+        env:
+          ACADEMY_CORE_DIR: ../AS-Academy-Core
+        run: |
+          ../AS-Academy-Core/gradlew -p . :academy-viewer:assembleDebug
