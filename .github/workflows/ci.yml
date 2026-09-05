@@ -5,11 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# CI فقط محتوا را می‌خواند و هیچ مجوز نوشتن روی Repository ندارد.
 permissions:
   contents: read
 
-# اجرای جدید همان Branch، اجرای قدیمی را متوقف می‌کند تا نتیجه منسوخ گزارش نشود.
 concurrency:
   group: core-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -21,6 +19,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Validate foundation contract
+        run: python3 integration/validate_contract.py
+
+      - name: Validate integration course template
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          contract = json.loads(Path("integration/contract.json").read_text())
+          template = json.loads(Path("course/template/manifest.json").read_text())
+
+          required = contract["courseManifestRequiredFields"]
+          missing = [key for key in required if key not in template]
+          if missing:
+              raise SystemExit(f"Course template is missing required integration fields: {missing}")
+          if template["contentSchemaVersion"] != contract["contentSchemaVersion"]:
+              raise SystemExit(
+                  f"Template schema {template['contentSchemaVersion']} does not match contract schema {contract['contentSchemaVersion']}"
+              )
+          if contract["android"] != {"minSdk": 23, "compileSdk": 36, "javaVersion": 17}:
+              raise SystemExit("integration/contract.json Android baseline drifted from the supported Core baseline")
+          print(f"Integration contract v{contract['contractVersion']} validated for Core {contract['coreVersion']}")
+          PY
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -44,7 +68,7 @@ jobs:
         run: ./gradlew :tools:run --args="compile course/template build/validated-course.json" --stacktrace
 
   android-runtime:
-    name: Android lint and sample build
+    name: Android runtime lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -68,5 +92,5 @@ jobs:
       - name: Lint the shared Android runtime
         run: ./gradlew :core:lintDebug --stacktrace
 
-      - name: Build the reference application
-        run: ./gradlew :sample-app:assembleDebug --stacktrace
+      # The official reference application lives in AS-Academy-MainUi/academy-viewer
+      # and is assembled by Foundation Integration with all three repositories checked out.

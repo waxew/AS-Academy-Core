@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -12,10 +11,6 @@ android {
     defaultConfig {
         minSdk = 23
         consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildFeatures {
-        compose = true
     }
 
     compileOptions {
@@ -36,8 +31,6 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.navigation.compose)
     // AcademyDatabase یک API عمومی Core و زیرکلاس RoomDatabase است؛ بنابراین مصرف‌کننده باید
     // RoomDatabase را روی compile classpath ببیند. runtime عمداً api است، نه implementation.
     api(libs.androidx.room.runtime)
@@ -47,15 +40,6 @@ dependencies {
     implementation(libs.androidx.work)
     implementation(libs.kotlinx.serialization.json)
 
-    implementation(platform(libs.compose.bom))
-    implementation(libs.compose.ui)
-    implementation(libs.compose.foundation)
-    implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons)
-    implementation(libs.compose.ui.tooling.preview)
-    debugImplementation(libs.compose.ui.tooling)
-
-    // Unit Testهای Android Runtime برای Repository و Migrationهای بعدی آماده شده‌اند.
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
 }

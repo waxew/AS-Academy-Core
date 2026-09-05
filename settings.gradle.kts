@@ -25,8 +25,7 @@ include(":engine")
 // ابزار خط فرمان به Course Repositoryها اجازه می‌دهد بدون اجرای Android، محتوا را Validate و Compile کنند.
 include(":tools")
 
-// Runtime اندروید شامل Room، DataStore، WorkManager و اجزای Compose است.
+// Runtime اندروید شامل persistence، DataStore، WorkManager و platform infrastructure است.
 include(":core")
 
-// این برنامه مرجع، نحوه اتصال یک Course Repository به Core را به‌صورت اجرایی نشان می‌دهد.
-include(":sample-app")
+// Reference application رسمی Foundation در AS-Academy-MainUi/academy-viewer نگهداری و در cross-repo CI ساخته می‌شود.
