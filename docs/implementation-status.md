@@ -1,6 +1,6 @@
 # وضعیت پیاده‌سازی AS Academy Core
 
-آخرین بازبینی: 2026-08-30 — نسخه Core: `1.3.0`
+آخرین بازبینی: 2026-09-06 — نسخه Core: `1.4.0`
 
 این جدول بین «API و پیاده‌سازی پایه موجود» و «آماده برای همه سناریوهای Production» تفاوت می‌گذارد.
 
@@ -19,29 +19,37 @@
 | Spaced Review / Flashcard | پیاده‌سازی و Unit Test | Glossary -> Flashcard، Scheduling، Due selection، Session snapshot/batch، Room، Backup/Restore و Review Screen |
 | Exercise | پیاده‌سازی پایه | مدل، Draft، Expected-output evaluator و Screen مشترک پاسخ/Hint/Solution؛ Runner واقعی هر زبان Plugin است |
 | Project/Achievement | پیاده‌سازی پایه | مدل، persistence، rule evaluation و Screen مشترک Milestone/Draft؛ UX پیشرفته پروژه باقی مانده |
-| Search/Bookmark/Notes | پیاده‌سازی شده | Room FTS، Repository و مدل‌های چنددوره‌ای؛ Screenهای کامل مدیریت هنوز باقی مانده‌اند |
-| Room database | پیاده‌سازی شده | Schema v4، Migration غیرمخرب 1→2→3→4، تشخیص دو شکل v2 و Flashcard Progress؛ تست Instrumented Migration و commit schema JSON هنوز باید افزوده شود |
+| Search/Bookmark/Notes | پیاده‌سازی شده | Room FTS، Repository و مدل‌های چنددوره‌ای؛ Screenهای کامل مدیریت در MainUi تکمیل می‌شوند |
+| Room database | پیاده‌سازی شده | Schema v4 و Migration غیرمخرب 1→2→3→4 موجود است؛ Instrumented Migration Test و commit schema JSON هنوز باید تکمیل شود |
+| Runtime composition | پیاده‌سازی شده | `AcademyRuntime` مالک ساخت Database، Repositoryها، Preferences و Reminder است؛ MainUi و Course Hostها نباید persistence graph موازی بسازند |
 | Settings/Profile/Drawer | پیاده‌سازی شده | DataStore، Theme/Font scale، URI پایدار تصویر، thumbnail و Drawer راست |
 | Navigation/App Shell/Theme | پیاده‌سازی شده | Home/Settings/About/Lesson/Quiz/Exercise/Project + Placement/Weak Review/Flashcard Review/Learning Catalog و Branding پویا |
 | Lesson Renderer | پیاده‌سازی پایه | Blockهای عمومی و لینک واقعی Quiz/Exercise/Project از Callback؛ Asset renderer از Host تزریق می‌شود |
 | Backup/Restore | پیاده‌سازی و Unit Test قرارداد | Schema v3، خواندن سازگار v1/v2، Flashcard Progress و Restore تراکنشی |
-| Content Update | پیاده‌سازی شده | SHA-256، SemVer، نصب Atomic و Rollback فایل محلی |
+| Content Update | پیاده‌سازی شده | Core 1.4.0: HTTPS metadata، SemVer/minimumCoreVersion preflight، SHA-256، نصب Atomic، Rollback و newest-valid-local selection |
 | Notifications | پیاده‌سازی پایه | WorkManager و بررسی مجوز Android 13+ |
 | Sample App | موجود و یکپارچه | Loader/Shell/Settings/Lesson + Quiz persistence + Placement + Weak Review + Flashcard Review؛ Catalog API نیز در sample-app compile می‌شود |
-| CI | موجود | JVM tests، Template validation، Android lint و Sample build |
+| CI | موجود | JVM tests، Template validation، Android lint و Sample build؛ integration gate سه‌ریپو در MainUi نیز اضافه شده است |
 | انتشار Maven/GitHub Packages | باقی مانده | فعلاً Composite Build روش رسمی مصرف است |
-| Cloud Sync/App Update service | خارج از نسخه 1.3 | API سرویس و سیاست Conflict هنوز طراحی نشده |
+| Cloud Sync/App Update service | خارج از 1.4 | API سرویس و سیاست Conflict هنوز طراحی نشده |
 | Code runners واقعی | مختص Course | فقط Contract/Registry عمومی در Core است |
 
-## معیار انتقال قابلیت از Course به Core
+## قرارداد مالکیت بین سه Repository
 
-اگر یک قابلیت در حداقل دو Course قابل استفاده است، Issue آن باید در Core باز و API عمومی آن اینجا پیاده‌سازی شود. Course می‌تواند تا زمان انتشار Core یک Adapter محدود داشته باشد، اما Fork دائمی Engine یا UI عمومی پذیرفته نیست.
+- **Core** مالک Engine، Database، Repositoryها، Runtime composition، Navigation contract، Update/Backup و state پایدار کاربر است.
+- **MainUi** مالک Design System، Screenها و presentation است و Runtime را از Core مصرف می‌کند؛ ساخت Database/Repository مستقل در MainUi مجاز نیست.
+- **MainCourse** تنها منبع قابل ویرایش محتوای دوره‌ها است و هر `courses/<id>/course` باید با Validator همان Core که Host مصرف می‌کند معتبر باشد.
+- Course App فقط Host نازک، application id، signing، branding/capability اختصاصی و Adapter واقعاً زبان‌محور را نگه می‌دارد.
+
+## معیار انتقال قابلیت از Course به Core/MainUi
+
+اگر یک قابلیت در حداقل دو Course قابل استفاده است، منطق/state آن باید در Core و presentation مشترک آن باید در MainUi قرار گیرد. Course می‌تواند Adapter واقعاً اختصاصی داشته باشد، اما Fork دائمی Engine، Repository، Navigation یا UI عمومی پذیرفته نیست.
 
 ## گام‌های کیفیت بعدی
 
 1. افزودن Room Migration instrumentation test و Commit schema JSON تولیدشده
-2. تکمیل UIهای Search، Bookmark و Notes
-3. افزودن Asset loader تصویری/صوتی با cache و accessibility
+2. انتقال کامل route/back-stack اختصاصی Folder Host به Navigation contract مرکزی Core
+3. تکمیل Asset loader تصویری/صوتی با cache و accessibility
 4. انتشار Artifact نسخه‌دار برای جایگزینی Composite Build در Release CI
 5. افزودن API اختیاری Cloud Sync بدون شکستن Offline-first
 6. افزودن UI تخصصی‌تر برای Code Runner و ارزیابی خودکار Exerciseهای زبان‌محور
