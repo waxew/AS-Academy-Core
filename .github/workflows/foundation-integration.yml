@@ -16,11 +16,11 @@ jobs:
         with:
           path: AS-Academy-Core
 
-      - name: Checkout MainUi foundation branch
+      - name: Checkout MainUi main
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainUi
-          ref: feat/foundation-v1-unification
+          ref: main
           path: AS-Academy-MainUi
 
       - name: Checkout MainCourse main
