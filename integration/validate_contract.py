@@ -13,7 +13,7 @@ def require(condition, message):
         errors.append(message)
 
 require(contract.get("contractVersion") == 1, "contractVersion must be 1")
-require(contract.get("coreVersion") == "1.4.0", "coreVersion must be 1.4.0")
+require(contract.get("coreVersion") == "1.5.0", "coreVersion must be 1.5.0 for Foundation v1.5")
 require(contract.get("contentSchemaVersion") == 1, "contentSchemaVersion must be 1")
 require(contract.get("android", {}).get("minSdk") == 23, "minSdk must be 23")
 require(contract.get("android", {}).get("compileSdk") == 36, "compileSdk must be 36")
@@ -21,6 +21,9 @@ require(contract.get("android", {}).get("javaVersion") == 17, "javaVersion must 
 
 coordinate = contract.get("coordinates", {}).get("core", "")
 require(coordinate == f"com.asdevelopers.academy:core:{contract.get('coreVersion')}", "Core coordinate/version mismatch")
+
+root_build = (ROOT / "build.gradle.kts").read_text(encoding="utf-8")
+require(f'version = "{contract.get("coreVersion")}"' in root_build, "Root Gradle version differs from foundation contract")
 
 build = (ROOT / "core" / "build.gradle.kts").read_text(encoding="utf-8")
 require(re.search(r"compileSdk\s*=\s*36", build) is not None, "core compileSdk differs from contract")
@@ -45,4 +48,4 @@ if errors:
         print(f" - {error}")
     sys.exit(1)
 
-print("Foundation contract OK: Core owns the Academy runtime and platform baseline")
+print("Foundation contract OK: Core 1.5.0 owns the Academy runtime and platform baseline")
