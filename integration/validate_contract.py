@@ -31,10 +31,18 @@ rules = contract.get("architectureRules", {})
 require(rules.get("backendImplementationOwnedByCore") is True, "Backend ownership must remain in Core")
 require(rules.get("singleRuntimeOwner") == "AS-Academy-Core", "Core must remain the single runtime owner")
 
+runtime_path = ROOT / "core" / "src" / "main" / "kotlin" / "com" / "asdevelopers" / "academy" / "core" / "runtime" / "AcademyRuntime.kt"
+require(runtime_path.exists(), "Core must expose AcademyRuntime as the single composition root")
+if runtime_path.exists():
+    runtime = runtime_path.read_text(encoding="utf-8")
+    require("AcademyDatabase.create(" in runtime, "AcademyRuntime must own database composition")
+    require("AcademyPreferencesRepository(" in runtime, "AcademyRuntime must own preferences composition")
+    require("StudyReminderScheduler(" in runtime, "AcademyRuntime must own scheduler composition")
+
 if errors:
     print("Foundation contract validation failed:")
     for error in errors:
         print(f" - {error}")
     sys.exit(1)
 
-print("Foundation contract OK: Core 1.4.0 / schema 1 / Android 23-36 / Java 17")
+print("Foundation contract OK: Core owns the Academy runtime and platform baseline")
