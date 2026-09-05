@@ -5,11 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-# CI فقط محتوا را می‌خواند و هیچ مجوز نوشتن روی Repository ندارد.
 permissions:
   contents: read
 
-# اجرای جدید همان Branch، اجرای قدیمی را متوقف می‌کند تا نتیجه منسوخ گزارش نشود.
 concurrency:
   group: core-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -22,7 +20,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Validate integration contract
+      - name: Validate foundation contract
+        run: python3 integration/validate_contract.py
+
+      - name: Validate integration course template
         shell: bash
         run: |
           python3 - <<'PY'
@@ -67,7 +68,7 @@ jobs:
         run: ./gradlew :tools:run --args="compile course/template build/validated-course.json" --stacktrace
 
   android-runtime:
-    name: Android lint and sample build
+    name: Android runtime lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -91,5 +92,5 @@ jobs:
       - name: Lint the shared Android runtime
         run: ./gradlew :core:lintDebug --stacktrace
 
-      - name: Build the reference application
-        run: ./gradlew :sample-app:assembleDebug --stacktrace
+      # The official reference application lives in AS-Academy-MainUi/academy-viewer
+      # and is assembled by Foundation Integration with all three repositories checked out.
