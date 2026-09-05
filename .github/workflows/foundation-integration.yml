@@ -16,18 +16,18 @@ jobs:
         with:
           path: AS-Academy-Core
 
-      - name: Checkout MainUi foundation candidate
+      - name: Checkout MainUi main
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainUi
-          ref: ${{ github.event_name == 'pull_request' && 'feat/foundation-v1-finalize' || 'main' }}
+          ref: main
           path: AS-Academy-MainUi
 
-      - name: Checkout MainCourse foundation candidate
+      - name: Checkout MainCourse main
         uses: actions/checkout@v4
         with:
           repository: waxew/AS-Academy-MainCourse
-          ref: ${{ github.event_name == 'pull_request' && 'feat/foundation-v1-finalize' || 'main' }}
+          ref: main
           path: AS-Academy-MainCourse
 
       - uses: actions/setup-python@v5
