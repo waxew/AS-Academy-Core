@@ -8,11 +8,15 @@ on:
       - feat/**
   pull_request:
 
+concurrency:
+  group: foundation-contract-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
