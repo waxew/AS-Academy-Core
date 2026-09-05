@@ -2,6 +2,35 @@
 
 همه تغییرات قابل انتشار AS Academy Core در این فایل ثبت می‌شوند. نسخه‌ها از Semantic Versioning پیروی می‌کنند.
 
+## 1.5.0 — 2026-09-06
+
+### Added
+
+- `AcademyRuntime` به‌عنوان composition root واحد برای database، repositoryها، settings، reminder و backend.
+- public domain/read modelها برای جلوگیری از وابستگی presentation به Room entityها.
+- `AcademyBackend` و gatewayهای Auth / Sync / Storage با `OfflineAcademyBackend` به‌عنوان default امن.
+- `integration/contract.json` به‌عنوان قرارداد machine-readable مشترک Core/MainUi/MainCourse.
+- Foundation Contract validator و cross-repository integration workflow.
+- build/test واقعی MainUi علیه Core candidate و assemble برنامه مرجع `AS-Academy-MainUi/academy-viewer` با MainCourse واقعی.
+- Compatibility Matrix برای Core 1.5.0، schema 1، Android minSdk 23 / compileSdk 36 و Java 17.
+
+### Changed
+
+- نسخه عمومی Core و coordinate قرارداد به `1.5.0` افزایش یافت.
+- مالکیت presentation از Core خارج و به `AS-Academy-MainUi` منتقل شد.
+- Compose، Navigation UI، App Shell و presentation dependencyهای legacy از Core حذف شدند.
+- Reference app از Core حذف شد؛ `academy-viewer` در MainUi مرجع end-to-end رسمی است.
+- MainUi از `AcademyRuntime` و public APIهای Core استفاده می‌کند و database/DAO/backend implementation را نمی‌سازد.
+- MainCourse به content-only source of truth تثبیت و manifestهای canonical با Contract v1 یکپارچه شدند.
+- cross-repo CI برای حالت stable فقط `main` واقعی MainUi و MainCourse را مصرف می‌کند.
+
+### Compatibility
+
+- تغییر database schema ندارد؛ Room روی v4 باقی می‌ماند.
+- Backup schema روی v3 باقی می‌ماند.
+- Course schema روی v1 باقی می‌ماند.
+- APIهای جدید additive هستند، اما MainUi Foundation 1.5 به Core `>=1.5.0 <2.0.0` نیاز دارد.
+
 ## 1.4.0 — 2026-09-01
 
 ### Added
