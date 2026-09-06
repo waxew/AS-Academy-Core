@@ -18,11 +18,35 @@ import com.asdevelopers.academy.core.repository.UserSyncOutboxRepository
 import com.asdevelopers.academy.core.settings.AcademyPreferencesRepository
 
 /**
- * The single composition root for every Academy application.
+ * ریشه ساخت و اتصال اجزای اصلی Core در تمام برنامه‌های AS Academy.
  *
- * Course applications and MainUi consume this runtime; they never create Core databases, DAOs,
- * repositories, schedulers or backend SDK clients themselves. Implementation details stay owned
- * by Core so platform changes propagate to every Academy application from one place.
+ * این کلاس Composition Root معماری Core است؛ یعنی تمام وابستگی‌های اصلی
+ * مانند Database، Repository ها، Backend و Scheduler در این نقطه ساخته می‌شوند.
+ *
+ * مسئولیت‌ها:
+ * - ایجاد نمونه Database مرکزی
+ * - ساخت Repository های مورد استفاده برنامه‌ها
+ * - اتصال Backend به Core
+ * - آماده‌سازی سرویس‌های مشترک آموزشی
+ *
+ * قوانین معماری:
+ * - MainUi نباید Database یا Repository بسازد.
+ * - MainCourse نباید جزئیات Core را مدیریت کند.
+ * - App های آموزشی فقط Runtime را مصرف می‌کنند.
+ *
+ * جریان وابستگی:
+ *
+ * Application
+ *      |
+ *      v
+ * AcademyRuntime
+ *      |
+ *      +-- Database
+ *      +-- Repository Layer
+ *      +-- Backend
+ *      +-- Notification Services
+ *
+ * این کلاس نباید شامل منطق نمایش UI یا منطق اختصاصی یک Course باشد.
  */
 class AcademyRuntime private constructor(
     internal val database: AcademyDatabase,
@@ -42,6 +66,19 @@ class AcademyRuntime private constructor(
 ) {
     companion object {
         @JvmStatic
+        /**
+         * ایجاد Runtime اصلی برنامه.
+         *
+         * مراحل اجرا:
+         * 1- دریافت Application Context
+         * 2- ساخت Database
+         * 3- ایجاد Repository ها
+         * 4- اتصال Backend
+         * 5- آماده‌سازی سرویس‌های Core
+         *
+         * خروجی:
+         * یک Runtime کامل که توسط App ها مصرف می‌شود.
+         */
         fun create(
             context: Context,
             databaseName: String = "as_academy.db",
