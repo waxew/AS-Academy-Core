@@ -53,8 +53,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Set up Gradle without shared build cache
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
 
       - name: Enforce candidate identity and version
         shell: bash
@@ -63,7 +65,7 @@ jobs:
           set -euo pipefail
           ACTUAL_SHA="$(git rev-parse HEAD)"
           EXPECTED_SHA="${{ steps.request.outputs.sha }}"
-          PROJECT_VERSION="$(./gradlew -q properties | awk -F': ' '$1 == "version" { print $2; exit }')"
+          PROJECT_VERSION="$(./gradlew -q properties --no-configuration-cache | awk -F': ' '$1 == "version" { print $2; exit }')"
           EXPECTED_VERSION="${{ steps.request.outputs.version }}"
           if [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then
             echo "Candidate resolved to ${ACTUAL_SHA}, expected ${EXPECTED_SHA}."
@@ -100,16 +102,19 @@ jobs:
             git push origin "refs/tags/${TAG}"
           fi
 
-      - name: Verify release candidate
+      - name: Verify release candidate from isolated Gradle state
         working-directory: candidate
-        run: ./gradlew clean test publishToMavenLocal
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/release-gradle-home
+        run: ./gradlew clean test publishToMavenLocal --no-build-cache --no-configuration-cache
 
       - name: Publish Course, Engine and Core to GitHub Packages
         working-directory: candidate
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository
+          GRADLE_USER_HOME: ${{ runner.temp }}/release-gradle-home
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository --no-build-cache --no-configuration-cache
 
       - name: Create GitHub Release if missing
         shell: bash
