@@ -12,7 +12,7 @@ Android hosts may provide only:
 `SupabaseAcademyConfig` rejects modern secret keys and legacy JWTs whose role is `service_role`. Never place a service-role/secret key in source code, Gradle resources, APK assets, BuildConfig fields, or client-accessible CI artifacts.
 
 ```kotlin
-val backend = SupabaseAcademyBackend.create(
+val backend = SupabaseSynchronizedAcademyBackend.create(
     context = applicationContext,
     config = SupabaseAcademyConfig(
         projectUrl = BuildConfig.ACADEMY_SUPABASE_URL,
@@ -58,7 +58,16 @@ Course packages are uploaded by trusted publishing automation to the private `ac
 
 ## Sync contract
 
-`academy_user_sync_events` is the user-owned remote synchronization boundary. Each logical entity is unique by `(user_id, course_id, entity_type, entity_id)`, which makes retry/upsert workflows idempotent. Conflict resolution should compare application-level timestamps/version clocks rather than trusting client arrival order.
+`SupabaseSynchronizedAcademyBackend.userSync` implements the provider-neutral `AcademyUserSyncGateway`.
+
+- `push(records)` performs authenticated PostgREST upserts with `resolution=merge-duplicates`.
+- the remote unique key `(user_id, course_id, entity_type, entity_id)` makes repeated sends idempotent at the logical-entity level;
+- every record also has a stable `operation_id` so a local retry queue can preserve mutation identity;
+- `pull(courseId, changedAfterIso8601)` returns remote changes in ascending update order for incremental reconciliation;
+- transient HTTP 408/429/5xx failures are classified as retryable rather than silently discarded;
+- RLS prevents a signed-in user from reading or mutating another user's records.
+
+`academy_user_sync_events` is the user-owned remote synchronization boundary. Hosts should keep unsent operations in their Core-owned local persistence and retry with the same operation IDs. Conflict resolution should compare application-level timestamps/version clocks rather than trusting network arrival order; ambiguous conflicts should be surfaced rather than overwritten by hidden provider logic.
 
 ## Project selection
 
