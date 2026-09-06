@@ -8,9 +8,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * دیتابیس مرکزی داده‌های کاربر.
+ * دیتابیس مرکزی داده‌های مهم کاربر.
  *
- * Course Package و Search Index قابل بازسازی‌اند، اما Progress، Note، Draft، Completion و Review Progress در Migration حفظ می‌شوند.
+ * Course Package و متن Search قابل بازسازی‌اند و در DB ذخیره نمی‌شوند؛ Progress، Note، Draft،
+ * Completion، Review Progress و Sync Outbox در Migration حفظ می‌شوند.
  */
 @Database(
     entities = [
@@ -23,9 +24,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ExerciseDraftEntity::class,
         ProjectProgressEntity::class,
         AchievementEntity::class,
-        FlashcardProgressEntity::class
+        FlashcardProgressEntity::class,
+        SyncOutboxEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AcademyDatabase : RoomDatabase() {
@@ -39,6 +41,7 @@ abstract class AcademyDatabase : RoomDatabase() {
     abstract fun projectProgressDao(): ProjectProgressDao
     abstract fun achievementDao(): AchievementDao
     abstract fun flashcardProgressDao(): FlashcardProgressDao
+    abstract fun syncOutboxDao(): SyncOutboxDao
 
     companion object {
         /**
@@ -47,7 +50,7 @@ abstract class AcademyDatabase : RoomDatabase() {
          */
         fun create(context: Context, name: String = "as_academy.db"): AcademyDatabase =
             Room.databaseBuilder(context.applicationContext, AcademyDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
 
         /** نسخه اولیه تک‌دوره‌ای را به ساختار چنددوره‌ای و Repositoryهای کامل ارتقا می‌دهد. */
@@ -72,7 +75,6 @@ abstract class AcademyDatabase : RoomDatabase() {
 
         /**
          * نسخه 4 فقط جدول مستقل Flashcard Progress را اضافه می‌کند؛ هیچ جدول یا ستون قبلی بازنویسی نمی‌شود.
-         * این Migration برای Update کاربرانی که داده آموزشی نسخه 3 دارند کاملاً non-destructive است.
          */
         val MIGRATION_3_4: Migration = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -80,8 +82,18 @@ abstract class AcademyDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * نسخه 5 متن مشتق‌شده Course را از FTS پاک می‌کند و فقط Outbox کوچک داده‌های کاربر را اضافه می‌کند.
+         * جدول legacy FTS برای سازگاری Room خالی می‌ماند؛ Core v5 دیگر هیچ محتوای Course در آن insert نمی‌کند.
+         */
+        val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DELETE FROM search_index")
+                ensureSyncOutboxTable(database)
+            }
+        }
+
         private fun migrateLegacyTablesToCourseAwareSchema(database: SupportSQLiteDatabase) {
-            // Progress قدیمی به Course پیش‌فرض منتقل و کلید اصلی ترکیبی ایجاد می‌شود.
             database.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS lesson_progress_new (
@@ -113,7 +125,6 @@ abstract class AcademyDatabase : RoomDatabase() {
             database.execSQL("ALTER TABLE lesson_progress_new RENAME TO lesson_progress")
             database.execSQL("CREATE INDEX IF NOT EXISTS index_lesson_progress_lessonId ON lesson_progress (lessonId)")
 
-            // ستون‌های جدید فقط وقتی وجود ندارند اضافه می‌شوند تا هر دو Schema آزمایشی نسخه 2 قابل ارتقا باشند.
             if (!database.hasColumn("bookmarks", "courseId")) {
                 database.execSQL("ALTER TABLE bookmarks ADD COLUMN courseId TEXT NOT NULL DEFAULT ''")
             }
@@ -133,11 +144,9 @@ abstract class AcademyDatabase : RoomDatabase() {
             }
             database.execSQL("CREATE INDEX IF NOT EXISTS index_user_notes_courseId_lessonId ON user_notes (courseId, lessonId)")
 
-            // FTS فقط Cache محتواست و پس از Import Course دوباره ساخته می‌شود.
             database.execSQL("DROP TABLE IF EXISTS search_index")
             database.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING FTS4(courseId, refId, refType, title, body)")
 
-            // جدول‌های جدید داده قدیمی متناظر ندارند و با IF NOT EXISTS در هر دو مسیر امن‌اند.
             database.execSQL(
                 "CREATE TABLE IF NOT EXISTS exercise_drafts (courseId TEXT NOT NULL, exerciseId TEXT NOT NULL, answer TEXT NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(courseId, exerciseId))"
             )
@@ -154,7 +163,6 @@ abstract class AcademyDatabase : RoomDatabase() {
                 "CREATE TABLE IF NOT EXISTS learning_completion (`key` TEXT NOT NULL, courseId TEXT NOT NULL DEFAULT '', targetType TEXT NOT NULL, targetId TEXT NOT NULL, completed INTEGER NOT NULL, completedAt INTEGER NOT NULL, PRIMARY KEY(`key`))"
             )
             if (!database.hasColumn("learning_completion", "courseId")) {
-                // رکوردهای شاخه آزمایشی با Course خالی حفظ و در اولین اتصال Host قابل نسبت‌دادن هستند.
                 database.execSQL("ALTER TABLE learning_completion ADD COLUMN courseId TEXT NOT NULL DEFAULT ''")
             }
             database.execSQL(
@@ -183,6 +191,29 @@ abstract class AcademyDatabase : RoomDatabase() {
             )
             database.execSQL(
                 "CREATE INDEX IF NOT EXISTS index_flashcard_progress_courseId_dueEpochDay ON flashcard_progress (courseId, dueEpochDay)"
+            )
+        }
+
+        private fun ensureSyncOutboxTable(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS sync_outbox (
+                    operationId TEXT NOT NULL,
+                    courseId TEXT NOT NULL,
+                    entityType TEXT NOT NULL,
+                    entityId TEXT NOT NULL,
+                    payloadJson TEXT NOT NULL,
+                    updatedAtIso8601 TEXT NOT NULL,
+                    deletedAtIso8601 TEXT,
+                    createdAtEpochMillis INTEGER NOT NULL,
+                    attemptCount INTEGER NOT NULL,
+                    nextAttemptAtEpochMillis INTEGER NOT NULL,
+                    PRIMARY KEY(operationId)
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_sync_outbox_courseId_nextAttemptAtEpochMillis ON sync_outbox (courseId, nextAttemptAtEpochMillis)"
             )
         }
 

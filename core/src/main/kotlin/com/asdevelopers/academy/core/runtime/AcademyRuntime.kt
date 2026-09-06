@@ -14,6 +14,7 @@ import com.asdevelopers.academy.core.repository.ProjectProgressRepository
 import com.asdevelopers.academy.core.repository.QuizHistoryRepository
 import com.asdevelopers.academy.core.repository.SearchRepository
 import com.asdevelopers.academy.core.repository.UserNoteRepository
+import com.asdevelopers.academy.core.repository.UserSyncOutboxRepository
 import com.asdevelopers.academy.core.settings.AcademyPreferencesRepository
 
 /**
@@ -35,6 +36,7 @@ class AcademyRuntime private constructor(
     val exerciseDraftRepository: ExerciseDraftRepository,
     val projectProgressRepository: ProjectProgressRepository,
     val learningCompletionRepository: LearningCompletionRepository,
+    val userSyncOutboxRepository: UserSyncOutboxRepository,
     val preferencesRepository: AcademyPreferencesRepository,
     val studyReminderScheduler: StudyReminderScheduler
 ) {
@@ -59,6 +61,7 @@ class AcademyRuntime private constructor(
                 exerciseDraftRepository = ExerciseDraftRepository(database.exerciseDraftDao()),
                 projectProgressRepository = ProjectProgressRepository(database.projectProgressDao()),
                 learningCompletionRepository = LearningCompletionRepository(database.learningCompletionDao()),
+                userSyncOutboxRepository = UserSyncOutboxRepository(database.syncOutboxDao(), backend.userSync),
                 preferencesRepository = AcademyPreferencesRepository(appContext),
                 studyReminderScheduler = StudyReminderScheduler(appContext)
             )
