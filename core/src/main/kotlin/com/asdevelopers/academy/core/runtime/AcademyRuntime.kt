@@ -8,13 +8,16 @@ import com.asdevelopers.academy.core.notification.StudyReminderScheduler
 import com.asdevelopers.academy.core.repository.AchievementRepository
 import com.asdevelopers.academy.core.repository.BookmarkRepository
 import com.asdevelopers.academy.core.repository.ExerciseDraftRepository
+import com.asdevelopers.academy.core.repository.FlashcardReviewRepository
 import com.asdevelopers.academy.core.repository.LearningCompletionRepository
+import com.asdevelopers.academy.core.repository.PlacementResultRepository
 import com.asdevelopers.academy.core.repository.ProgressRepository
 import com.asdevelopers.academy.core.repository.ProjectProgressRepository
 import com.asdevelopers.academy.core.repository.QuizHistoryRepository
 import com.asdevelopers.academy.core.repository.SearchRepository
 import com.asdevelopers.academy.core.repository.UserNoteRepository
 import com.asdevelopers.academy.core.repository.UserSyncOutboxRepository
+import com.asdevelopers.academy.core.repository.WeakTopicReviewRepository
 import com.asdevelopers.academy.core.settings.AcademyPreferencesRepository
 
 /**
@@ -36,6 +39,9 @@ class AcademyRuntime private constructor(
     val exerciseDraftRepository: ExerciseDraftRepository,
     val projectProgressRepository: ProjectProgressRepository,
     val learningCompletionRepository: LearningCompletionRepository,
+    val placementResultRepository: PlacementResultRepository,
+    val weakTopicReviewRepository: WeakTopicReviewRepository,
+    val flashcardReviewRepository: FlashcardReviewRepository,
     val userSyncOutboxRepository: UserSyncOutboxRepository,
     val preferencesRepository: AcademyPreferencesRepository,
     val studyReminderScheduler: StudyReminderScheduler
@@ -49,6 +55,7 @@ class AcademyRuntime private constructor(
         ): AcademyRuntime {
             val appContext = context.applicationContext
             val database = AcademyDatabase.create(appContext, databaseName)
+            val quizResultDao = database.quizResultDao()
             return AcademyRuntime(
                 database = database,
                 backend = backend,
@@ -57,10 +64,13 @@ class AcademyRuntime private constructor(
                 userNoteRepository = UserNoteRepository(database.userNoteDao()),
                 searchRepository = SearchRepository(database.searchDao()),
                 achievementRepository = AchievementRepository(database.achievementDao()),
-                quizHistoryRepository = QuizHistoryRepository(database.quizResultDao()),
+                quizHistoryRepository = QuizHistoryRepository(quizResultDao),
                 exerciseDraftRepository = ExerciseDraftRepository(database.exerciseDraftDao()),
                 projectProgressRepository = ProjectProgressRepository(database.projectProgressDao()),
                 learningCompletionRepository = LearningCompletionRepository(database.learningCompletionDao()),
+                placementResultRepository = PlacementResultRepository(quizResultDao),
+                weakTopicReviewRepository = WeakTopicReviewRepository(quizResultDao),
+                flashcardReviewRepository = FlashcardReviewRepository(database.flashcardProgressDao()),
                 userSyncOutboxRepository = UserSyncOutboxRepository(database.syncOutboxDao(), backend.userSync),
                 preferencesRepository = AcademyPreferencesRepository(appContext),
                 studyReminderScheduler = StudyReminderScheduler(appContext)
