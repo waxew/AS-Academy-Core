@@ -7,8 +7,9 @@ plugins {
     alias(libs.plugins.ksp) apply false
 }
 
-// این مختصات در Composite Build و انتشارهای آینده، وابستگی پروژه‌های Course را پایدار نگه می‌دارد.
+// Foundation v1.5.0 remains the immutable release baseline. New public backend/sync APIs belong to
+// the next minor development line so publishing main can never overwrite the 1.5.0 coordinates.
 allprojects {
     group = "com.asdevelopers.academy"
-    version = "1.5.0"
+    version = "1.6.0-SNAPSHOT"
 }

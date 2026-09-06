@@ -1,10 +1,12 @@
 # AS Academy Foundation Compatibility Matrix
 
-This file is the human-readable companion to `integration/contract.json`. The JSON contract is authoritative and CI-enforced.
+This file is the human-readable companion to `integration/contract.json`. The JSON contract is authoritative and CI-enforced for the latest stable Foundation baseline.
 
 | Foundation baseline | Core | MainUi requires | Content schema | Runtime content schema | minSdk | compileSdk | Java |
 |---|---:|---|---:|---:|---:|---:|---:|
 | Foundation v1.5 | 1.5.0 | `>=1.5.0 <2.0.0` | 1 | 1 | 23 | 36 | 17 |
+
+Development on `main` may move to the next `-SNAPSHOT` Core coordinate after a stable baseline is locked. Snapshot coordinates are not Foundation releases and must never replace artifacts for the stable row above.
 
 ## Ownership boundaries
 
@@ -15,11 +17,12 @@ This file is the human-readable companion to `integration/contract.json`. The JS
 
 ## Compatibility policy
 
-- A new public Core API requires a Core minor/major version bump and synchronized contract update across all three repositories.
+- A new public Core API after a stable release moves Core development to the next minor/major `-SNAPSHOT` line; the synchronized three-repository contract is updated before that line becomes the next stable Foundation baseline.
 - A breaking Core API or content-contract change requires a new major contract/baseline.
 - Course manifests may retain an older `minimumCoreVersion` when their content does not depend on newer runtime features.
 - MainUi must never access Room/DAO/database/backend implementations directly.
 - Backend providers such as Supabase must be implemented behind Core-owned abstractions; credentials are never committed.
+- Release automation must tag an exact validated commit SHA whose project version is a stable `x.y.z`, never a moving branch or a `-SNAPSHOT` coordinate.
 
 ## Release gate
 

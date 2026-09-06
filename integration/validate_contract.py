@@ -22,8 +22,21 @@ require(contract.get("android", {}).get("javaVersion") == 17, "javaVersion must 
 coordinate = contract.get("coordinates", {}).get("core", "")
 require(coordinate == f"com.asdevelopers.academy:core:{contract.get('coreVersion')}", "Core coordinate/version mismatch")
 
+# The Foundation contract stays locked to the last stable release while main may move to the
+# immediately following minor SNAPSHOT for additive development. Stable versions never get this
+# exception: publishing a new stable Core requires a synchronized contract/baseline bump.
 root_build = (ROOT / "build.gradle.kts").read_text(encoding="utf-8")
-require(f'version = "{contract.get("coreVersion")}"' in root_build, "Root Gradle version differs from foundation contract")
+version_match = re.search(r'allprojects\s*\{.*?version\s*=\s*"([^"]+)"', root_build, re.S)
+root_version = version_match.group(1) if version_match else None
+contract_version = contract.get("coreVersion")
+next_minor_snapshot = None
+if isinstance(contract_version, str) and re.fullmatch(r"\d+\.\d+\.\d+", contract_version):
+    major, minor, _patch = (int(part) for part in contract_version.split("."))
+    next_minor_snapshot = f"{major}.{minor + 1}.0-SNAPSHOT"
+require(
+    root_version in {contract_version, next_minor_snapshot},
+    f"Root Gradle version must be locked Foundation {contract_version} or guarded next-minor snapshot {next_minor_snapshot}"
+)
 
 build = (ROOT / "core" / "build.gradle.kts").read_text(encoding="utf-8")
 require(re.search(r"compileSdk\s*=\s*36", build) is not None, "core compileSdk differs from contract")
@@ -59,4 +72,4 @@ if errors:
         print(f" - {error}")
     sys.exit(1)
 
-print("Foundation contract OK: Core 1.5.0 is runtime-only and owns platform/backend composition")
+print(f"Foundation contract OK: locked Core {contract_version}; development version {root_version}")
