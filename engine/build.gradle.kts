@@ -1,29 +1,45 @@
 plugins {
-    // موتورهای آموزشی مستقل از Android باقی می‌مانند تا قابل تست و استفاده در ابزارهای دیگر باشند.
     `java-library`
+    `maven-publish`
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
-    // JDK 17 با حداقل نسخه مورد نیاز Android Gradle Plugin هم‌راستا است.
     jvmToolchain(17)
 }
 
-dependencies {
-    // تمام موتورهای عمومی از قرارداد واحد Course استفاده می‌کنند.
-    api(project(":course"))
+java {
+    withSourcesJar()
+}
 
-    // State و عملیات asynchronous موتورهای عمومی با Coroutines پیاده‌سازی می‌شود.
+dependencies {
+    api(project(":course"))
     api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
-
-    // Unit Testها بدون Android SDK اجرا می‌شوند.
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
 }
 
 tasks.test {
-    // همه تست‌ها روی JUnit Platform اجرا می‌شوند.
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("engine") {
+            from(components["java"])
+            artifactId = "engine"
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/waxew/AS-Academy-Core")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orNull
+                password = providers.environmentVariable("GITHUB_TOKEN").orNull
+            }
+        }
+    }
 }
