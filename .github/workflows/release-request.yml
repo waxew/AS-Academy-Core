@@ -65,7 +65,7 @@ jobs:
           set -euo pipefail
           ACTUAL_SHA="$(git rev-parse HEAD)"
           EXPECTED_SHA="${{ steps.request.outputs.sha }}"
-          PROJECT_VERSION="$(./gradlew -q properties --no-configuration-cache | awk -F': ' '$1 == "version" { print $2; exit }')"
+          PROJECT_VERSION="$(./gradlew -q properties --no-configuration-cache --no-parallel --max-workers=1 | awk -F': ' '$1 == "version" { print $2; exit }')"
           EXPECTED_VERSION="${{ steps.request.outputs.version }}"
           if [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then
             echo "Candidate resolved to ${ACTUAL_SHA}, expected ${EXPECTED_SHA}."
@@ -102,11 +102,11 @@ jobs:
             git push origin "refs/tags/${TAG}"
           fi
 
-      - name: Verify release candidate from isolated Gradle state
+      - name: Verify release candidate from isolated serialized Gradle state
         working-directory: candidate
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/release-gradle-home
-        run: ./gradlew clean test publishToMavenLocal --no-build-cache --no-configuration-cache
+        run: ./gradlew clean test publishToMavenLocal --no-build-cache --no-configuration-cache --no-parallel --max-workers=1
 
       - name: Publish or verify immutable GitHub Packages artifacts
         shell: bash
@@ -145,7 +145,7 @@ jobs:
               exit 1
             fi
 
-            ./gradlew "${task}" --no-build-cache --no-configuration-cache
+            ./gradlew "${task}" --no-build-cache --no-configuration-cache --no-parallel --max-workers=1
             http_code="$(curl -sSL -u "${GITHUB_ACTOR}:${GITHUB_TOKEN}" -o "${remote_file}" -w '%{http_code}' "${remote_url}")"
             if [[ "${http_code}" != "200" ]]; then
               echo "Published ${artifact}:${VERSION} but could not read it back (HTTP ${http_code})."
