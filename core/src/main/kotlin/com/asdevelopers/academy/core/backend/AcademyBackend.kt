@@ -5,6 +5,10 @@ interface AcademyBackend {
     val auth: AcademyAuthGateway
     val sync: AcademySyncGateway
     val storage: AcademyStorageGateway
+
+    /** Optional authenticated user-data synchronization surface. */
+    val userSync: AcademyUserSyncGateway
+        get() = OfflineAcademyUserSyncGateway
 }
 
 interface AcademyAuthGateway {
@@ -43,6 +47,31 @@ interface AcademySyncGateway {
     ): AcademySyncResult = syncCourse(courseId)
 }
 
+/**
+ * Provider-neutral, idempotent user-data sync boundary. Payload stays opaque JSON so Core does not
+ * couple progress/notes/bookmarks persistence to a provider-specific model.
+ */
+interface AcademyUserSyncGateway {
+    suspend fun push(records: List<AcademyUserSyncRecord>): AcademyUserSyncPushResult
+    suspend fun pull(courseId: String, changedAfterIso8601: String? = null): List<AcademyUserSyncRecord>
+}
+
+data class AcademyUserSyncRecord(
+    val operationId: String,
+    val courseId: String,
+    val entityType: String,
+    val entityId: String,
+    val payloadJson: String,
+    val updatedAtIso8601: String,
+    val deletedAtIso8601: String? = null
+)
+
+data class AcademyUserSyncPushResult(
+    val accepted: Int,
+    val retryable: Boolean = false,
+    val message: String? = null
+)
+
 interface AcademyStorageGateway {
     suspend fun resolveCourseContentUrl(courseId: String, version: String): String?
 }
@@ -53,6 +82,18 @@ data class AcademySyncResult(
     val remoteVersion: String? = null,
     val remoteSha256: String? = null
 )
+
+object OfflineAcademyUserSyncGateway : AcademyUserSyncGateway {
+    override suspend fun push(records: List<AcademyUserSyncRecord>): AcademyUserSyncPushResult =
+        AcademyUserSyncPushResult(
+            accepted = 0,
+            retryable = records.isNotEmpty(),
+            message = "offline"
+        )
+
+    override suspend fun pull(courseId: String, changedAfterIso8601: String?): List<AcademyUserSyncRecord> =
+        emptyList()
+}
 
 /** Safe default for offline-first Academy apps that have no remote backend configured. */
 object OfflineAcademyBackend : AcademyBackend {
@@ -68,4 +109,6 @@ object OfflineAcademyBackend : AcademyBackend {
     override val storage: AcademyStorageGateway = object : AcademyStorageGateway {
         override suspend fun resolveCourseContentUrl(courseId: String, version: String): String? = null
     }
+
+    override val userSync: AcademyUserSyncGateway = OfflineAcademyUserSyncGateway
 }
