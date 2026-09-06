@@ -27,6 +27,10 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 }
 
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    useJUnitPlatform()
+}
+
 afterEvaluate {
     publishing {
         publications {
