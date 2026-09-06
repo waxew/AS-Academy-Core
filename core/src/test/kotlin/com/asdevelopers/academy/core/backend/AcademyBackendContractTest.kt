@@ -39,10 +39,10 @@ class AcademyBackendContractTest {
         val objectRef = AcademyStorageObject(
             url = "https://example.invalid/course.zip",
             sha256 = "a".repeat(64),
-            sizeBytes = 1024,
-            expiresAtEpochSeconds = 1_800_000_000
+            sizeBytes = 1024L,
+            expiresAtEpochSeconds = 1_800_000_000L
         )
         assertEquals(64, objectRef.sha256?.length)
-        assertEquals(1024, objectRef.sizeBytes)
+        assertEquals(1024L, objectRef.sizeBytes)
     }
 }
