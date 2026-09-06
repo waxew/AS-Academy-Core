@@ -1,7 +1,6 @@
 name: Publish Foundation Artifacts
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -25,6 +24,17 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Enforce tag matches project version
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_VERSION="$(./gradlew -q properties | awk -F': ' '$1 == "version" { print $2; exit }')"
+          EXPECTED_TAG="v${PROJECT_VERSION}"
+          if [[ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match project version ${PROJECT_VERSION} (expected ${EXPECTED_TAG})."
+            exit 1
+          fi
 
       - name: Verify release artifacts locally
         run: ./gradlew clean test publishToMavenLocal
