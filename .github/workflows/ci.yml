@@ -68,7 +68,7 @@ jobs:
         run: ./gradlew :tools:run --args="compile course/template build/validated-course.json" --stacktrace
 
   android-runtime:
-    name: Android runtime lint
+    name: Android runtime and backend provider
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -89,8 +89,14 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Lint the shared Android runtime
-        run: ./gradlew :core:lintDebug --stacktrace
+      - name: Test Supabase provider
+        run: ./gradlew :supabase-backend:testDebugUnitTest --stacktrace
+
+      - name: Lint shared runtime and Supabase provider
+        run: ./gradlew :core:lintDebug :supabase-backend:lintDebug --stacktrace
+
+      - name: Verify all release artifacts can be published locally
+        run: ./gradlew publishToMavenLocal --stacktrace
 
       # The official reference application lives in AS-Academy-MainUi/academy-viewer
       # and is assembled by Foundation Integration with all three repositories checked out.
