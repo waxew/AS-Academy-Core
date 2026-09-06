@@ -16,7 +16,6 @@ import com.asdevelopers.academy.core.database.ProjectProgressEntity
 import com.asdevelopers.academy.core.database.QuizResultDao
 import com.asdevelopers.academy.core.database.QuizResultEntity
 import com.asdevelopers.academy.core.database.SearchDao
-import com.asdevelopers.academy.core.database.SearchIndexEntity
 import com.asdevelopers.academy.core.database.UserNoteDao
 import com.asdevelopers.academy.core.database.UserNoteEntity
 import com.asdevelopers.academy.core.exercise.ExerciseDraft
@@ -34,9 +33,9 @@ import com.asdevelopers.academy.core.progress.LessonStatus
 import com.asdevelopers.academy.core.project.ProjectProgress
 import com.asdevelopers.academy.core.quiz.Quiz
 import com.asdevelopers.academy.core.quiz.QuizScore
-import com.asdevelopers.academy.core.search.FtsQueryBuilder
 import com.asdevelopers.academy.core.search.SearchDocument
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -146,16 +145,57 @@ class ProjectProgressRepository(private val dao: ProjectProgressDao) {
     suspend fun save(progress: ProjectProgress) = dao.upsert(progress.toEntity())
 }
 
+/**
+ * Search stays derived from the currently loaded Course Package and is never persisted as course
+ * text in Room. The DAO remains only to purge legacy FTS cache rows created by pre-v5 installs.
+ */
 class SearchRepository(private val dao: SearchDao) {
+    private val documentsByCourse = ConcurrentHashMap<String, List<SearchDocument>>()
+
     suspend fun search(courseId: String, rawQuery: String, limit: Int = 50): List<AcademySearchResult> {
-        val ftsQuery = FtsQueryBuilder.build(rawQuery)
-        if (ftsQuery.isBlank()) return emptyList()
-        return dao.search(courseId, ftsQuery, limit.coerceIn(1, 100)).map(SearchIndexEntity::toModel)
+        val tokens = rawQuery
+            .trim()
+            .lowercase()
+            .split(Regex("\\s+"))
+            .map { token -> token.filter { it.isLetterOrDigit() || it == '_' || it == '-' } }
+            .filter(String::isNotBlank)
+        if (tokens.isEmpty()) return emptyList()
+
+        return documentsByCourse[courseId]
+            .orEmpty()
+            .asSequence()
+            .map { document ->
+                val title = document.title.lowercase()
+                val body = document.body.lowercase()
+                val searchable = "$title\n$body"
+                val matches = tokens.all(searchable::contains)
+                val titleHits = tokens.count(title::contains)
+                Triple(document, matches, titleHits)
+            }
+            .filter { it.second }
+            .sortedWith(compareByDescending<Triple<SearchDocument, Boolean, Int>> { it.third }.thenBy { it.first.title })
+            .take(limit.coerceIn(1, 100))
+            .map { (document) ->
+                AcademySearchResult(
+                    courseId = document.courseId,
+                    refId = document.refId,
+                    refType = document.refType,
+                    title = document.title,
+                    body = document.body
+                )
+            }
+            .toList()
     }
 
     suspend fun replaceCourse(courseId: String, documents: List<SearchDocument>) {
+        require(courseId.isNotBlank()) { "courseId is required for search indexing" }
         dao.clearCourse(courseId)
-        dao.insertAll(documents.map { SearchIndexEntity(it.courseId, it.refId, it.refType, it.title, it.body) })
+        documentsByCourse[courseId] = documents.filter { it.courseId == courseId }.toList()
+    }
+
+    suspend fun clearCourse(courseId: String) {
+        documentsByCourse.remove(courseId)
+        dao.clearCourse(courseId)
     }
 }
 
@@ -194,14 +234,6 @@ private fun QuizResultEntity.toModel() = AcademyQuizAttempt(
     wrongCount = wrongCount,
     weakTags = weakTags.split(TAG_SEPARATOR).filter(String::isNotBlank),
     completedAtEpochMillis = completedAt
-)
-
-private fun SearchIndexEntity.toModel() = AcademySearchResult(
-    courseId = courseId,
-    refId = refId,
-    refType = refType,
-    title = title,
-    body = body
 )
 
 private fun AchievementEntity.toModel() = AcademyUnlockedAchievement(
