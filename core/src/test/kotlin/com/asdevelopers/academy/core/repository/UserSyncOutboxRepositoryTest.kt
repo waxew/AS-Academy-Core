@@ -6,9 +6,10 @@ import com.asdevelopers.academy.core.backend.AcademyUserSyncRecord
 import com.asdevelopers.academy.core.database.SyncOutboxDao
 import com.asdevelopers.academy.core.database.SyncOutboxEntity
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class UserSyncOutboxRepositoryTest {
     @Test
@@ -49,10 +50,14 @@ class UserSyncOutboxRepositoryTest {
         assertEquals(1, dao.items.single().attemptCount)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun oversizedPayloadCannotTurnDatabaseIntoFileStorage() = runBlocking {
+    @Test
+    fun oversizedPayloadCannotTurnDatabaseIntoFileStorage() {
         val repository = UserSyncOutboxRepository(FakeOutboxDao(), NoopGateway) { 1_000L }
-        repository.enqueue(record("op-big", payload = "x".repeat(65 * 1024)))
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                repository.enqueue(record("op-big", payload = "x".repeat(65 * 1024)))
+            }
+        }
     }
 
     private fun record(operationId: String, payload: String = "{\"progress\":50}") = AcademyUserSyncRecord(
