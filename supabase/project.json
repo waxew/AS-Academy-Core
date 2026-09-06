@@ -1,0 +1,14 @@
+{
+  "projectName": "AS Academy",
+  "projectRef": "ykezeaoionxyrmfflzpj",
+  "projectUrl": "https://ykezeaoionxyrmfflzpj.supabase.co",
+  "region": "eu-central-1",
+  "releaseTable": "academy_course_releases",
+  "syncTable": "academy_user_sync_events",
+  "courseBucket": "academy-courses",
+  "credentialPolicy": {
+    "clientKeyType": "publishable",
+    "commitClientKey": false,
+    "commitSecretOrServiceRoleKey": false
+  }
+}
