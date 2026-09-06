@@ -41,7 +41,6 @@ data class LearningCompletionEntity(
 @Entity(tableName = "bookmarks", indices = [Index("courseId"), Index(value = ["courseId", "targetId"])])
 data class BookmarkEntity(
     @PrimaryKey val id: String,
-    // Default SQL با Migration 1→2 یکسان است تا Room schema validation اختلاف گزارش نکند.
     @ColumnInfo(defaultValue = "''") val courseId: String,
     val targetType: String,
     val targetId: String,
@@ -73,7 +72,10 @@ data class UserNoteEntity(
     val updatedAt: Long
 )
 
-/** ایندکس Full Text Search مستقل از Course خاص. */
+/**
+ * Legacy FTS table retained only for schema compatibility with existing installations.
+ * Core v5 never inserts Course text here; Search runs from the loaded Course Package in memory.
+ */
 @Fts4
 @Entity(tableName = "search_index")
 data class SearchIndexEntity(
@@ -130,4 +132,25 @@ data class FlashcardProgressEntity(
     val lastReviewedEpochDay: Long?,
     val dueEpochDay: Long,
     val updatedAt: Long
+)
+
+/**
+ * Durable queue for small user-state mutations waiting for remote synchronization.
+ * It intentionally stores only sync metadata/payloads, never Course packages or educational assets.
+ */
+@Entity(
+    tableName = "sync_outbox",
+    indices = [Index(value = ["courseId", "nextAttemptAtEpochMillis"])]
+)
+data class SyncOutboxEntity(
+    @PrimaryKey val operationId: String,
+    val courseId: String,
+    val entityType: String,
+    val entityId: String,
+    val payloadJson: String,
+    val updatedAtIso8601: String,
+    val deletedAtIso8601: String?,
+    val createdAtEpochMillis: Long,
+    val attemptCount: Int,
+    val nextAttemptAtEpochMillis: Long
 )
