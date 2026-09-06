@@ -8,36 +8,60 @@ on:
         required: true
         type: string
       release_ref:
-        description: 'Exact immutable commit SHA/ref to release; use the validated Foundation baseline SHA'
+        description: 'Exact immutable commit SHA to release'
         required: true
         type: string
+  issues:
+    types: [opened]
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   create-tag:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.actor == github.repository_owner && startsWith(github.event.issue.title, 'release:'))
     runs-on: ubuntu-latest
     steps:
-      - name: Validate immutable release input
+      - name: Resolve release request
+        id: request
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_VERSION: ${{ inputs.version }}
+          DISPATCH_REF: ${{ inputs.release_ref }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
           set -euo pipefail
-          REQUESTED_VERSION="${{ inputs.version }}"
-          RELEASE_REF="${{ inputs.release_ref }}"
-          if [[ ! "${REQUESTED_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${DISPATCH_VERSION}"
+            RELEASE_REF="${DISPATCH_REF}"
+          else
+            REQUEST="${ISSUE_TITLE#release:}"
+            VERSION="${REQUEST%%@*}"
+            RELEASE_REF="${REQUEST#*@}"
+            if [[ "${VERSION}" == "${REQUEST}" || "${RELEASE_REF}" == "${REQUEST}" ]]; then
+              echo "Issue title must be release:<x.y.z>@<40-char-sha>."
+              exit 1
+            fi
+          fi
+          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Only stable x.y.z versions can be released."
             exit 1
           fi
           if [[ ! "${RELEASE_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            echo "release_ref must be an exact 40-character commit SHA, not a moving branch."
+            echo "release_ref must be an exact 40-character commit SHA."
             exit 1
           fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_ref=${RELEASE_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout immutable release commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref }}
+          ref: ${{ steps.request.outputs.release_ref }}
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -55,7 +79,8 @@ jobs:
         run: |
           set -euo pipefail
           PROJECT_VERSION="$(./gradlew -q properties | awk -F': ' '$1 == "version" { print $2; exit }')"
-          REQUESTED_VERSION="${{ inputs.version }}"
+          REQUESTED_VERSION="${{ steps.request.outputs.version }}"
+          EXPECTED_SHA="${{ steps.request.outputs.release_ref }}"
           if [[ "${PROJECT_VERSION}" == *-SNAPSHOT ]]; then
             echo "Snapshot project version ${PROJECT_VERSION} cannot be released."
             exit 1
@@ -65,8 +90,8 @@ jobs:
             exit 1
           fi
           ACTUAL_SHA="$(git rev-parse HEAD)"
-          if [[ "${ACTUAL_SHA}" != "${{ inputs.release_ref }}" ]]; then
-            echo "Checkout resolved to ${ACTUAL_SHA}, expected immutable ref ${{ inputs.release_ref }}."
+          if [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then
+            echo "Checkout resolved to ${ACTUAL_SHA}, expected immutable SHA ${EXPECTED_SHA}."
             exit 1
           fi
           echo "tag=v${PROJECT_VERSION}" >> "$GITHUB_OUTPUT"
@@ -95,3 +120,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "${TAG}" -m "AS Academy Foundation ${TAG}" "${SHA}"
           git push origin "refs/tags/${TAG}"
+
+      - name: Close successful release request
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue close "${{ github.event.issue.number }}" --comment "Release request completed: ${{ steps.version.outputs.tag }} at ${{ steps.version.outputs.sha }}."
