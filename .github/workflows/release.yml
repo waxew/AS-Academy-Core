@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Foundation version without v prefix (for example 1.5.0)'
+        description: 'Stable Foundation version without v prefix (for example 1.5.0)'
+        required: true
+        type: string
+      release_ref:
+        description: 'Exact immutable commit SHA/ref to release; use the validated Foundation baseline SHA'
         required: true
         type: string
 
@@ -15,10 +19,25 @@ jobs:
   create-tag:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Validate immutable release input
+        shell: bash
+        run: |
+          set -euo pipefail
+          REQUESTED_VERSION="${{ inputs.version }}"
+          RELEASE_REF="${{ inputs.release_ref }}"
+          if [[ ! "${REQUESTED_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Only stable x.y.z versions can be released."
+            exit 1
+          fi
+          if [[ ! "${RELEASE_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "release_ref must be an exact 40-character commit SHA, not a moving branch."
+            exit 1
+          fi
+
+      - name: Checkout immutable release commit
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ inputs.release_ref }}
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -30,18 +49,28 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Enforce requested version matches project version
+      - name: Enforce requested version matches release commit
         id: version
         shell: bash
         run: |
           set -euo pipefail
           PROJECT_VERSION="$(./gradlew -q properties | awk -F': ' '$1 == "version" { print $2; exit }')"
           REQUESTED_VERSION="${{ inputs.version }}"
+          if [[ "${PROJECT_VERSION}" == *-SNAPSHOT ]]; then
+            echo "Snapshot project version ${PROJECT_VERSION} cannot be released."
+            exit 1
+          fi
           if [[ "${REQUESTED_VERSION}" != "${PROJECT_VERSION}" ]]; then
-            echo "Requested version ${REQUESTED_VERSION} does not match project version ${PROJECT_VERSION}."
+            echo "Requested version ${REQUESTED_VERSION} does not match release commit version ${PROJECT_VERSION}."
+            exit 1
+          fi
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [[ "${ACTUAL_SHA}" != "${{ inputs.release_ref }}" ]]; then
+            echo "Checkout resolved to ${ACTUAL_SHA}, expected immutable ref ${{ inputs.release_ref }}."
             exit 1
           fi
           echo "tag=v${PROJECT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha=${ACTUAL_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Ensure tag does not already exist
         shell: bash
@@ -61,7 +90,8 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${{ steps.version.outputs.tag }}"
+          SHA="${{ steps.version.outputs.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "AS Academy Foundation ${TAG}" "${GITHUB_SHA}"
+          git tag -a "${TAG}" -m "AS Academy Foundation ${TAG}" "${SHA}"
           git push origin "refs/tags/${TAG}"
