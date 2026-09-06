@@ -9,9 +9,10 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
-  create-tag:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release request
@@ -77,29 +78,49 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure immutable tag does not already exist
-        shell: bash
-        working-directory: candidate
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.request.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists. Refusing overwrite."
-            exit 1
-          fi
-
-      - name: Verify release candidate
-        working-directory: candidate
-        run: ./gradlew clean test publishToMavenLocal
-
-      - name: Create immutable annotated tag
+      - name: Verify existing tag or create immutable tag
         shell: bash
         working-directory: candidate
         run: |
           set -euo pipefail
           TAG="${{ steps.request.outputs.tag }}"
           SHA="${{ steps.request.outputs.sha }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${TAG}" -m "AS Academy Foundation ${TAG}" "${SHA}"
-          git push origin "refs/tags/${TAG}"
+          git fetch --tags --force origin
+          if git show-ref --verify --quiet "refs/tags/${TAG}"; then
+            TAG_SHA="$(git rev-list -n 1 "${TAG}")"
+            if [[ "${TAG_SHA}" != "${SHA}" ]]; then
+              echo "Existing tag ${TAG} resolves to ${TAG_SHA}, expected ${SHA}. Refusing to continue."
+              exit 1
+            fi
+            echo "Verified existing immutable tag ${TAG} at ${SHA}."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" -m "AS Academy Foundation ${TAG}" "${SHA}"
+            git push origin "refs/tags/${TAG}"
+          fi
+
+      - name: Verify release candidate
+        working-directory: candidate
+        run: ./gradlew clean test publishToMavenLocal
+
+      - name: Publish Course, Engine and Core to GitHub Packages
+        working-directory: candidate
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository
+
+      - name: Create GitHub Release if missing
+        shell: bash
+        working-directory: candidate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.request.outputs.tag }}"
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "GitHub Release ${TAG} already exists."
+          else
+            gh release create "${TAG}" --verify-tag --title "AS Academy Foundation ${TAG}" --generate-notes
+          fi
